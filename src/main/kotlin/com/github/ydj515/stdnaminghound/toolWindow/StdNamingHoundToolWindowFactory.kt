@@ -306,13 +306,7 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             fun selectDomainByName(name: String?) {
                 val target = name?.trim().orEmpty()
                 if (target.isBlank()) return
-                val model = domainCombo.model
-                val found = (0 until model.size).asSequence()
-                    .map { model.getElementAt(it) }
-                    .any { it == target }
-                if (found) {
-                    domainCombo.selectedItem = target
-                }
+                domainCombo.selectedItem = target
             }
 
             fun refreshMeta() {
@@ -503,9 +497,7 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
 
             fun buildColumnOutputFromColumns(): String {
                 if (columnsModel.size == 0) return ""
-                return (0 until columnsModel.size)
-                    .asSequence()
-                    .map { columnsModel.getElementAt(it) }
+                return columnsModel.elements().asSequence()
                     .flatMap { entry ->
                         sequenceOf(entry.definition, entry.commentSql)
                             .filterNot { it.isNullOrBlank() }
@@ -517,15 +509,17 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             fun buildCreateTableFromColumns(): String {
                 if (columnsModel.size == 0) return ""
                 val dialect = DbDialect.fromName(settings.state.dbDialect)
-                val definitions = (0 until columnsModel.size)
-                    .map { columnsModel.getElementAt(it).definition }
+                val definitions = columnsModel.elements().asSequence()
+                    .map { it.definition }
+                    .toList()
                 val create = "CREATE TABLE TABLE_NAME (\n  ${definitions.joinToString(",\n  ")}\n);"
                 if (dialect == DbDialect.MYSQL) {
                     return create
                 }
-                val comments = (0 until columnsModel.size)
-                    .map { columnsModel.getElementAt(it).commentSql }
+                val comments = columnsModel.elements().asSequence()
+                    .map { it.commentSql }
                     .filterNot { it.isNullOrBlank() }
+                    .toList()
                 return if (comments.isEmpty()) create else "$create\n${comments.joinToString("\n")}"
             }
 
@@ -552,26 +546,24 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             fun rebuildColumnEntriesForDialect() {
                 if (columnsModel.size == 0) return
                 val dialect = DbDialect.fromName(settings.state.dbDialect)
-                val updated = mutableListOf<ColumnEntry>()
-                for (i in 0 until columnsModel.size) {
-                    val entry = columnsModel.getElementAt(i)
-                    val domain = findDomainByName(entry.domainName) ?: defaultDomain()
-                    val result = sqlGenerator.generateColumnSql(
-                        columnName = entry.name,
-                        domain = domain,
-                        description = entry.description,
-                        dialect = dialect,
-                        format = SqlFormat.COLUMN_DEFINITION,
-                    )
-                    val parts = splitColumnSql(result.sql)
-                    updated.add(
+                val updated = columnsModel.elements().asSequence()
+                    .map { entry ->
+                        val domain = findDomainByName(entry.domainName) ?: defaultDomain()
+                        val result = sqlGenerator.generateColumnSql(
+                            columnName = entry.name,
+                            domain = domain,
+                            description = entry.description,
+                            dialect = dialect,
+                            format = SqlFormat.COLUMN_DEFINITION,
+                        )
+                        val parts = splitColumnSql(result.sql)
                         entry.copy(
                             definition = parts.definition,
                             commentSql = parts.commentSql,
                             domainName = domain.name,
                         )
-                    )
-                }
+                    }
+                    .toList()
                 columnsModel.removeAllElements()
                 updated.forEach { columnsModel.addElement(it) }
             }
@@ -742,7 +734,7 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 val entry = buildColumnEntryForBuilder()
                 if (entry != null) {
                     if (columnsModel.containsName(entry.name)) {
-                        Messages.showInfoMessage(project, "이미 추가된 컬럼입니다: ${entry.name}", "컬럼 추가")
+                        Messages.showInfoMessage(project, "이미 Stage에 추가된 컬럼입니다: ${entry.name}", "Add Stage Failed")
                         return@addActionListener
                     }
                     columnsModel.addElement(entry)
@@ -955,12 +947,9 @@ private class ColumnReorderTransferHandler(
 
     override fun getSourceActions(c: JComponent): Int = MOVE
 
-    override fun createTransferable(c: JComponent): Transferable {
+    override fun createTransferable(c: JComponent): Transferable? {
         fromIndex = list.selectedIndex
-        val value = list.selectedValue ?: return ColumnEntryTransferable(
-            ColumnEntry("", "", null, null, null),
-            flavor,
-        )
+        val value = list.selectedValue ?: return null
         return ColumnEntryTransferable(value, flavor)
     }
 
@@ -1066,6 +1055,8 @@ private class SearchItemRenderer : javax.swing.ListCellRenderer<SearchItem> {
 
     private fun ellipsize(text: String, max: Int): String {
         val trimmed = text.trim()
+        if (max <= 0) return ""
+        if (max <= 3) return trimmed.take(max)
         if (trimmed.length <= max) return trimmed
         return trimmed.substring(0, max - 3) + "..."
     }
