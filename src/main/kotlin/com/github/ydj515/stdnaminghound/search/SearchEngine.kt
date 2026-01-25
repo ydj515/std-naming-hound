@@ -3,7 +3,6 @@ package com.github.ydj515.stdnaminghound.search
 import com.github.ydj515.stdnaminghound.model.SearchItem
 import com.github.ydj515.stdnaminghound.settings.StdNamingHoundSettings
 import com.intellij.openapi.components.service
-import kotlin.math.min
 
 class SearchEngine(
     private val indexRepository: SearchIndexRepository = service(),
@@ -77,12 +76,7 @@ class SearchEngine(
 
     private fun ngrams(text: String, n: Int): Set<String> {
         if (text.length < n) return emptySet()
-        val size = min(text.length - n + 1, 256)
-        val set = LinkedHashSet<String>(size)
-        for (i in 0..text.length - n) {
-            set.add(text.substring(i, i + n))
-        }
-        return set
+        return text.windowed(size = n, step = 1).toSet()
     }
 
     private fun containsHangul(text: String): Boolean {
