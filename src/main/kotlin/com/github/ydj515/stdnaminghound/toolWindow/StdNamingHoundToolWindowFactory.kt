@@ -395,11 +395,30 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 val result = sqlGenerator.generateColumnSql(
                     columnName = columnName,
                     domain = domain,
-                    description = term.description,
+                    description = term.koName,
                     dialect = dialect,
                     format = format,
                 )
                 return result.sql
+            }
+
+            fun findDomainForBuilder(): Domain {
+                val selected = selectedDomainFromCombo()
+                if (selected != null) return selected
+                val item = resultList.selectedValue
+                return when (item?.type) {
+                    SearchItemType.DOMAIN -> datasetRepository.getDataset()
+                        .domains
+                        .getOrNull((item.payloadRef as DomainRef).index)
+                        ?: defaultDomain()
+                    SearchItemType.TERM -> {
+                        val term = datasetRepository.getDataset()
+                            .terms
+                            .getOrNull((item.payloadRef as TermRef).index)
+                        findDomainByName(term?.domainName) ?: defaultDomain()
+                    }
+                    else -> defaultDomain()
+                }
             }
 
             fun buildSqlForBuilder(): String? {
@@ -408,21 +427,7 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                     Messages.showInfoMessage(project, "Builder 결과가 없습니다.", "SQL 생성")
                     return null
                 }
-                val item = resultList.selectedValue
-                val domain = selectedDomainFromCombo()
-                    ?: when (item?.type) {
-                        SearchItemType.DOMAIN -> datasetRepository.getDataset()
-                            .domains
-                            .getOrNull((item.payloadRef as DomainRef).index)
-                        SearchItemType.TERM -> {
-                            val term = datasetRepository.getDataset()
-                                .terms
-                                .getOrNull((item.payloadRef as TermRef).index)
-                            findDomainByName(term?.domainName)
-                        }
-                        else -> null
-                    }
-                    ?: defaultDomain()
+                val domain = findDomainForBuilder()
                 val dialect = DbDialect.fromName(settings.state.dbDialect)
                 val format = sqlFormatCombo.selectedItem as SqlFormat
                 val comment = builder.getTokens().joinToString(" ") { it.koName }
@@ -609,8 +614,10 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             UIManager.put("MenuItem.acceleratorSelectionForeground", fg)
         }
 
-        private fun defaultDomain(): Domain {
-            return Domain(
+        private fun defaultDomain(): Domain = DEFAULT_DOMAIN
+
+        companion object {
+            private val DEFAULT_DOMAIN = Domain(
                 name = "기본V255",
                 dataType = "VARCHAR",
                 length = 255,
