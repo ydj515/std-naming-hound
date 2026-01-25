@@ -55,11 +55,10 @@ class SearchIndexBuilder {
     }
 
     private fun Term.toSearchItem(index: Int): SearchItem {
-        val subText = when {
-            !domainName.isNullOrBlank() -> "Domain: $domainName"
-            !description.isNullOrBlank() -> description
-            else -> null
-        }
+        val subText = listOfNotNull(
+            domainName?.takeIf { it.isNotBlank() }?.let { "Domain: $it" },
+            description?.takeIf { it.isNotBlank() },
+        ).joinToString(" | ").ifBlank { null }
         return SearchItem(
             type = SearchItemType.TERM,
             titleKo = koName,
