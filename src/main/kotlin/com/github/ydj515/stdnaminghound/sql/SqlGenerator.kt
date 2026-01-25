@@ -89,9 +89,11 @@ class SqlGenerator {
         val suffix = when {
             length != null && scale != null -> "($length,$scale)"
             length != null -> "($length)"
+            dataType.isBlank() -> "(255)"
             else -> ""
         }
-        return when (dataType) {
+        val effectiveType = if (dataType.isBlank()) "VARCHAR" else dataType
+        return when (effectiveType) {
             "NUMERIC" -> when (dialect) {
                 DbDialect.ORACLE -> "NUMBER$suffix"
                 DbDialect.MYSQL -> "DECIMAL$suffix"
@@ -102,7 +104,7 @@ class SqlGenerator {
                 DbDialect.ORACLE -> "VARCHAR2$suffix"
                 else -> "VARCHAR$suffix"
             }
-            else -> if (suffix.isNotBlank()) "$dataType$suffix" else dataType
+            else -> if (suffix.isNotBlank()) "$effectiveType$suffix" else effectiveType
         }
     }
 

@@ -4,6 +4,7 @@ import com.github.ydj515.stdnaminghound.search.SearchIndexRepository
 import com.github.ydj515.stdnaminghound.storage.DatasetRepository
 import com.github.ydj515.stdnaminghound.storage.MergePolicy
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.ui.Messages
@@ -23,12 +24,9 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 class StdNamingHoundConfigurable : Configurable {
-    private val settings =
-        ApplicationManager.getApplication().getService(StdNamingHoundSettings::class.java)
-    private val datasetRepository =
-        ApplicationManager.getApplication().getService(DatasetRepository::class.java)
-    private val searchIndexRepository =
-        ApplicationManager.getApplication().getService(SearchIndexRepository::class.java)
+    private val settings: StdNamingHoundSettings = ApplicationManager.getApplication().service()
+    private val datasetRepository: DatasetRepository = ApplicationManager.getApplication().service()
+    private val searchIndexRepository: SearchIndexRepository = ApplicationManager.getApplication().service()
     private val validator = CustomDatasetValidator()
 
     private var root: JPanel? = null
@@ -43,8 +41,8 @@ class StdNamingHoundConfigurable : Configurable {
         wrapStyleWord = true
         isEditable = false
     }
-    private val loadFileButton = javax.swing.JButton("JSON 파일 임포트")
-    private val downloadSampleButton = javax.swing.JButton("샘플 JSON 다운로드")
+    private val loadFileButton = javax.swing.JButton("Import JSON")
+    private val downloadSampleButton = javax.swing.JButton("Download Sample")
     private val resetButton = javax.swing.JButton("Reset to Default")
 
     override fun createComponent(): JComponent {
@@ -68,7 +66,7 @@ class StdNamingHoundConfigurable : Configurable {
                 row {
                     val info = com.intellij.ui.components.JBLabel(
                         "<html>필수 필드: version. terms/words/domains는 비워둘 수 있습니다.<br/>" +
-                                "병합 정책과 '커스텀 데이터만 사용' 옵션을 함께 확인하세요.</html>"
+                                "'Merge Policy'와 'Use only custom data' 옵션을 함께 확인하세요.</html>"
                     )
                     cell(info)
                 }
