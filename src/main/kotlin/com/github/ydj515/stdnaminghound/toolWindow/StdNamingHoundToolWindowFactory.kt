@@ -9,8 +9,11 @@ import com.github.ydj515.stdnaminghound.model.Term
 import com.github.ydj515.stdnaminghound.model.TermRef
 import com.github.ydj515.stdnaminghound.model.Word
 import com.github.ydj515.stdnaminghound.model.WordRef
-import com.github.ydj515.stdnaminghound.search.SearchEngine
 import com.github.ydj515.stdnaminghound.search.SearchIndexRepository
+import com.github.ydj515.stdnaminghound.settings.StdNamingHoundSettings
+import com.github.ydj515.stdnaminghound.sql.DbDialect
+import com.github.ydj515.stdnaminghound.sql.SqlFormat
+import com.github.ydj515.stdnaminghound.sql.SqlGenerator
 import com.github.ydj515.stdnaminghound.storage.DatasetRepository
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
@@ -34,9 +37,12 @@ import com.intellij.util.Alarm
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.labels.LinkLabel
+import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.util.ui.JBUI
+import com.github.ydj515.stdnaminghound.search.SearchEngine
 import java.awt.BorderLayout
 import java.awt.FlowLayout
+import java.awt.Dimension
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.awt.event.KeyEvent
@@ -46,11 +52,14 @@ import javax.swing.JMenuItem
 import javax.swing.JPopupMenu
 import javax.swing.JCheckBox
 import javax.swing.JComboBox
+import javax.swing.DefaultComboBoxModel
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JSplitPane
 import javax.swing.UIManager
 import javax.swing.Box
+import javax.swing.JScrollPane
+import javax.swing.JTextArea
 
 
 class StdNamingHoundToolWindowFactory : ToolWindowFactory {
@@ -70,6 +79,8 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
         private val searchEngine = SearchEngine(searchIndexRepository)
         private val alarm = Alarm(Alarm.ThreadToUse.POOLED_THREAD, toolWindow.disposable)
         private val builder = WordBuilder()
+        private val settings = service<StdNamingHoundSettings>()
+        private val sqlGenerator = SqlGenerator()
         private val project = toolWindow.project
 
         fun getContent() = JBPanel<JBPanel<*>>().apply {
@@ -79,6 +90,12 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             val listModel = DefaultListModel<SearchItem>()
             val resultList = JBList(listModel)
             val builderModeCheck = JCheckBox("Builder 모드")
+            val sqlFormatCombo = JComboBox(SqlFormat.entries.toTypedArray()).apply {
+                preferredSize = Dimension(140, preferredSize.height)
+            }
+            val sqlButton = JButton(AllIcons.Actions.Execute).apply {
+                toolTipText = "SQL 생성(선택 항목)"
+            }
             val detailArea = JBTextArea().apply {
                 isEditable = false
                 lineWrap = true
@@ -89,20 +106,23 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 toolTipText = ""
             }
             val tokensPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0))
+            val domainCombo = JComboBox<String>()
             val caseCombo = JComboBox(WordBuilder.CaseStyle.entries.toTypedArray())
                 .apply {
-                    preferredSize = JBUI.size(JBUI.scale(170), preferredSize.height)
-                    maximumSize = JBUI.size(JBUI.scale(170), preferredSize.height)
+                    preferredSize = JBUI.size(JBUI.scale(165), preferredSize.height)
+                    maximumSize = JBUI.size(JBUI.scale(165), preferredSize.height)
                 }
+            domainCombo.preferredSize = JBUI.size(JBUI.scale(165), domainCombo.preferredSize.height)
+            domainCombo.maximumSize = JBUI.size(JBUI.scale(165), domainCombo.preferredSize.height)
             val previewHeight = caseCombo.preferredSize.height
             builderPreview.preferredSize = JBUI.size(JBUI.scale(220), previewHeight)
             builderPreview.minimumSize = JBUI.size(JBUI.scale(120), previewHeight)
             builderPreview.maximumSize = java.awt.Dimension(Int.MAX_VALUE, previewHeight)
-            val builderInsertButton = JButton(AllIcons.Actions.Edit).apply {
-                toolTipText = "Insert Builder"
-            }
             val builderClearButton = JButton(AllIcons.Actions.GC).apply {
                 toolTipText = "Clear Builder"
+            }
+            val builderSqlButton = JButton(AllIcons.Actions.Execute).apply {
+                toolTipText = "SQL 생성(Builder)"
             }
             var addBuilderMenuItem: JMenuItem? = null
 
@@ -111,6 +131,9 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
 
             val buttonBar = JPanel(FlowLayout(FlowLayout.LEFT)).apply {
                 add(builderModeCheck)
+                add(JBLabel("SQL 형식"))
+                add(sqlFormatCombo)
+                add(sqlButton)
             }
             val topBar = JPanel(BorderLayout()).apply {
                 add(searchField, BorderLayout.CENTER)
@@ -122,7 +145,8 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             val iconColumnWidth = JBUI.scale(20)
             val iconContentGap = JBUI.scale(8)
             tokensPanel.border = JBUI.Borders.empty()
-            val builderControls = JPanel(BorderLayout()).apply {
+            val builderControls = JPanel().apply {
+                layout = javax.swing.BoxLayout(this, javax.swing.BoxLayout.Y_AXIS)
                 val row1 = JPanel(BorderLayout()).apply {
                     val iconPanel = JPanel(BorderLayout()).apply {
                         add(JBLabel(AllIcons.General.GearPlain), BorderLayout.CENTER)
@@ -163,11 +187,27 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                     add(contentPanel, BorderLayout.CENTER)
                 }
                 val row3 = JPanel(BorderLayout()).apply {
+                    val iconPanel = JPanel(BorderLayout()).apply {
+                        add(JBLabel(AllIcons.Nodes.DataTables), BorderLayout.CENTER)
+                    }.apply {
+                        preferredSize = JBUI.size(iconColumnWidth, preferredSize.height)
+                        minimumSize = JBUI.size(iconColumnWidth, minimumSize.height)
+                        maximumSize = JBUI.size(iconColumnWidth, maximumSize.height)
+                    }
+                    val contentPanel = JPanel(BorderLayout()).apply {
+                        border = JBUI.Borders.empty(0, iconContentGap, 0, 0)
+                        add(domainCombo, BorderLayout.WEST)
+                    }
+                    border = JBUI.Borders.empty(0, leftInset, 0, 0)
+                    add(iconPanel, BorderLayout.WEST)
+                    add(contentPanel, BorderLayout.CENTER)
+                }
+                val row4 = JPanel(BorderLayout()).apply {
                     val spacer = Box.createHorizontalStrut(iconColumnWidth)
                     val contentPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-                        add(builderInsertButton)
-                        add(Box.createHorizontalStrut(JBUI.scale(8)))
                         add(builderClearButton)
+                        add(Box.createHorizontalStrut(JBUI.scale(8)))
+                        add(builderSqlButton)
                     }
                     border = JBUI.Borders.empty(0, leftInset, 0, 0)
                     val contentWithGap = JPanel(BorderLayout()).apply {
@@ -177,9 +217,10 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                     add(spacer, BorderLayout.WEST)
                     add(contentWithGap, BorderLayout.CENTER)
                 }
-                add(row1, BorderLayout.NORTH)
-                add(row2, BorderLayout.CENTER)
-                add(row3, BorderLayout.SOUTH)
+                add(row1)
+                add(row2)
+                add(row3)
+                add(row4)
             }
             val builderPanel = JPanel(BorderLayout()).apply {
                 val tokensRow = JPanel(BorderLayout()).apply {
@@ -216,6 +257,12 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             add(topBar, BorderLayout.NORTH)
             add(splitPane, BorderLayout.CENTER)
 
+            fun refreshDomainCombo(domains: List<Domain>) {
+                val names = mutableListOf("선택 안 함")
+                names.addAll(domains.map { it.name })
+                domainCombo.model = DefaultComboBoxModel(names.toTypedArray())
+            }
+
             fun refreshMeta() {
                 val dataset = datasetRepository.getDataset()
                 val meta = dataset.meta
@@ -228,6 +275,7 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                     append(", domains=").append(dataset.domains.size)
                     append(" | Index=").append(searchIndexRepository.getIndex().entries.size)
                 }
+                refreshDomainCombo(dataset.domains)
             }
 
             fun updateResults(query: String) {
@@ -266,8 +314,8 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 }
                 tokensPanel.revalidate()
                 tokensPanel.repaint()
-                builderInsertButton.isEnabled = name.isNotBlank()
                 builderClearButton.isEnabled = builder.getTokens().isNotEmpty()
+                builderSqlButton.isEnabled = name.isNotBlank()
                 builderPreview.revalidate()
                 builderPreview.repaint()
             }
@@ -276,6 +324,7 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 val item = resultList.selectedValue
                 val canAdd = builderModeCheck.isSelected && item?.type == SearchItemType.WORD
                 addBuilderMenuItem?.isEnabled = canAdd
+                sqlButton.isEnabled = item?.type == SearchItemType.TERM
             }
 
             fun copyText(text: String) {
@@ -314,6 +363,77 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                     builder.add(word)
                     updateBuilderPreview()
                 }
+            }
+
+            fun findDomainByName(name: String?): Domain? {
+                val key = name?.trim().orEmpty()
+                if (key.isBlank()) return null
+                return datasetRepository.getDataset().domains.firstOrNull { it.name == key }
+            }
+
+            fun selectedDomainFromCombo(): Domain? {
+                val selected = domainCombo.selectedItem as? String ?: return null
+                if (selected == "선택 안 함") return null
+                return findDomainByName(selected)
+            }
+
+            fun buildSqlForSelectedTerm(): String? {
+                val item = resultList.selectedValue ?: return null
+                if (item.type != SearchItemType.TERM) {
+                    Messages.showInfoMessage(project, "TERM을 선택하세요.", "SQL 생성")
+                    return null
+                }
+                val term = datasetRepository.getDataset().terms.getOrNull((item.payloadRef as TermRef).index)
+                if (term == null) {
+                    Messages.showInfoMessage(project, "선택한 TERM을 찾지 못했습니다.", "SQL 생성")
+                    return null
+                }
+                val domain = findDomainByName(term.domainName) ?: defaultDomain()
+                val dialect = DbDialect.fromName(settings.state.dbDialect)
+                val format = sqlFormatCombo.selectedItem as SqlFormat
+                val columnName = term.abbr?.takeIf { it.isNotBlank() } ?: term.koName
+                val result = sqlGenerator.generateColumnSql(
+                    columnName = columnName,
+                    domain = domain,
+                    description = term.description,
+                    dialect = dialect,
+                    format = format,
+                )
+                return result.sql
+            }
+
+            fun buildSqlForBuilder(): String? {
+                val name = builder.buildName()
+                if (name.isBlank()) {
+                    Messages.showInfoMessage(project, "Builder 결과가 없습니다.", "SQL 생성")
+                    return null
+                }
+                val item = resultList.selectedValue
+                val domain = selectedDomainFromCombo()
+                    ?: when (item?.type) {
+                        SearchItemType.DOMAIN -> datasetRepository.getDataset()
+                            .domains
+                            .getOrNull((item.payloadRef as DomainRef).index)
+                        SearchItemType.TERM -> {
+                            val term = datasetRepository.getDataset()
+                                .terms
+                                .getOrNull((item.payloadRef as TermRef).index)
+                            findDomainByName(term?.domainName)
+                        }
+                        else -> null
+                    }
+                    ?: defaultDomain()
+                val dialect = DbDialect.fromName(settings.state.dbDialect)
+                val format = sqlFormatCombo.selectedItem as SqlFormat
+                val comment = builder.getTokens().joinToString(" ") { it.koName }
+                val result = sqlGenerator.generateColumnSql(
+                    columnName = name,
+                    domain = domain,
+                    description = comment,
+                    dialect = dialect,
+                    format = format,
+                )
+                return result.sql
             }
 
             searchField.textEditor.document.addDocumentListener(object : javax.swing.event.DocumentListener {
@@ -426,18 +546,28 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 builder.setCaseStyle(style)
                 updateBuilderPreview()
             }
-            builderInsertButton.addActionListener {
-                insertText(builder.buildName())
-            }
             builderClearButton.addActionListener {
                 builder.clear()
                 updateBuilderPreview()
+            }
+            builderSqlButton.addActionListener {
+                val sql = buildSqlForBuilder()
+                if (sql != null) {
+                    SqlPreviewDialog(project, sql, ::copyText, ::insertText).show()
+                }
             }
             builderPreview.setListener({ _, _ ->
                 val text = builder.buildName()
                 copyText(text)
                 showCopiedToast(text)
             }, null)
+
+            sqlButton.addActionListener {
+                val sql = buildSqlForSelectedTerm()
+                if (sql != null) {
+                    SqlPreviewDialog(project, sql, ::copyText, ::insertText).show()
+                }
+            }
 
             val menuMask = Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
             val inputMap = resultList.getInputMap(JComponent.WHEN_FOCUSED)
@@ -477,6 +607,18 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             UIManager.put("Menu.selectionBackground", bg)
             UIManager.put("Menu.selectionForeground", fg)
             UIManager.put("MenuItem.acceleratorSelectionForeground", fg)
+        }
+
+        private fun defaultDomain(): Domain {
+            return Domain(
+                name = "기본V255",
+                dataType = "VARCHAR",
+                length = 255,
+                scale = null,
+                storageFormat = null,
+                displayFormat = null,
+                allowedValues = null,
+            )
         }
 
         private fun buildDetailText(item: SearchItem): String {
@@ -546,6 +688,43 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 if (!allowedValues.isNullOrBlank()) append("허용값: ").append(allowedValues).append("\n")
             }
         }
+    }
+}
+
+private class SqlPreviewDialog(
+    project: Project,
+    private val sql: String,
+    private val onCopy: (String) -> Unit,
+    private val onInsert: (String) -> Unit,
+) : DialogWrapper(project) {
+    init {
+        title = "SQL Preview"
+        init()
+    }
+
+    override fun createCenterPanel(): JComponent {
+        val area = JTextArea(sql).apply {
+            isEditable = false
+            lineWrap = true
+            wrapStyleWord = true
+        }
+        val scroll = JScrollPane(area)
+        scroll.preferredSize = Dimension(600, 240)
+        return scroll
+    }
+
+    override fun createActions(): Array<javax.swing.Action> {
+        val copyAction = object : DialogWrapperAction("Copy") {
+            override fun doAction(e: java.awt.event.ActionEvent?) {
+                onCopy(sql)
+            }
+        }
+        val insertAction = object : DialogWrapperAction("Insert") {
+            override fun doAction(e: java.awt.event.ActionEvent?) {
+                onInsert(sql)
+            }
+        }
+        return arrayOf(copyAction, insertAction, okAction)
     }
 }
 

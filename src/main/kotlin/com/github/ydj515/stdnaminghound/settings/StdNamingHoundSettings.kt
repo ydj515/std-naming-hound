@@ -15,6 +15,7 @@ class StdNamingHoundSettings : PersistentStateComponent<StdNamingHoundSettings.S
         var useCustomOnly: Boolean = false,
         var enableFuzzy: Boolean = true,
         var dbDialect: String = "Postgres",
+        var mergePolicy: String = com.github.ydj515.stdnaminghound.storage.MergePolicy.CUSTOM_FIRST.name,
         var customDatasetJson: String? = null,
     )
 
