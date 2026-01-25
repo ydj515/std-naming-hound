@@ -4,6 +4,8 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import com.intellij.util.messages.Topic
+import com.github.ydj515.stdnaminghound.builder.WordBuilder
 
 @State(
     name = "StdNamingHoundSettings",
@@ -16,6 +18,7 @@ class StdNamingHoundSettings : PersistentStateComponent<StdNamingHoundSettings.S
         var enableFuzzy: Boolean = true,
         var dbDialect: String = "Postgres",
         var mergePolicy: String = com.github.ydj515.stdnaminghound.storage.MergePolicy.CUSTOM_FIRST.name,
+        var defaultCaseStyle: String = WordBuilder.CaseStyle.SNAKE_UPPER.name,
         var customDatasetJson: String? = null,
     )
 
@@ -25,5 +28,10 @@ class StdNamingHoundSettings : PersistentStateComponent<StdNamingHoundSettings.S
 
     override fun loadState(state: State) {
         this.state = state
+    }
+
+    companion object {
+        val TOPIC: Topic<StdNamingHoundSettingsListener> =
+            Topic.create("StdNamingHoundSettings", StdNamingHoundSettingsListener::class.java)
     }
 }

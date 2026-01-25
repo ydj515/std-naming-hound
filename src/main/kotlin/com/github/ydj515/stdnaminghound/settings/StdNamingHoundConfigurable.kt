@@ -3,6 +3,7 @@ package com.github.ydj515.stdnaminghound.settings
 import com.github.ydj515.stdnaminghound.search.SearchIndexRepository
 import com.github.ydj515.stdnaminghound.storage.DatasetRepository
 import com.github.ydj515.stdnaminghound.storage.MergePolicy
+import com.github.ydj515.stdnaminghound.builder.WordBuilder
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
@@ -32,9 +33,14 @@ class StdNamingHoundConfigurable : Configurable {
     private var root: JPanel? = null
     private val useCustomOnlyCheck = JBCheckBox("Use only custom data")
     private val enableFuzzyCheck = JBCheckBox("Enable fuzzy search")
-    private val dbDialectCombo = JComboBox(arrayOf("Postgres", "Oracle", "MySQL"))
+    private val dbDialectCombo = JComboBox(arrayOf("Postgres", "Oracle", "MySQL")).apply {
+        minimumSize = java.awt.Dimension(220, minimumSize.height)
+    }
+    private val caseStyleCombo = JComboBox(WordBuilder.CaseStyle.entries.toTypedArray()).apply {
+        minimumSize = java.awt.Dimension(220, minimumSize.height)
+    }
     private val mergePolicyCombo = JComboBox(MergePolicy.entries.toTypedArray()).apply {
-        preferredSize = java.awt.Dimension(220, preferredSize.height)
+        minimumSize = java.awt.Dimension(220, minimumSize.height)
     }
     private val customJsonArea = JBTextArea().apply {
         lineWrap = true
@@ -60,13 +66,16 @@ class StdNamingHoundConfigurable : Configurable {
                         }
                     cell(help)
                 }
+                row("Case Style") {
+                    cell(caseStyleCombo)
+                }
                 row("Merge Policy") {
                     cell(mergePolicyCombo)
                 }
                 row {
                     val info = com.intellij.ui.components.JBLabel(
-                        "<html>필수 필드: version. terms/words/domains는 비워둘 수 있습니다.<br/>" +
-                                "'Merge Policy'와 'Use only custom data' 옵션을 함께 확인하세요.</html>"
+                        "<html>version is required, but terms/words/domains can be left blank.<br/>" +
+                                "Check the 'Merge Policy' and 'Use only custom data' options together.</html>"
                     )
                     cell(info)
                 }
@@ -133,6 +142,8 @@ class StdNamingHoundConfigurable : Configurable {
         if (dbDialectCombo.selectedItem as String != state.dbDialect) return true
         val selectedPolicy = (mergePolicyCombo.selectedItem as MergePolicy).name
         if (selectedPolicy != state.mergePolicy) return true
+        val selectedCaseStyle = (caseStyleCombo.selectedItem as WordBuilder.CaseStyle).name
+        if (selectedCaseStyle != state.defaultCaseStyle) return true
         val currentJson = customJsonArea.text.trim()
         val savedJson = state.customDatasetJson?.trim().orEmpty()
         return currentJson != savedJson
@@ -153,9 +164,14 @@ class StdNamingHoundConfigurable : Configurable {
         state.enableFuzzy = enableFuzzyCheck.isSelected
         state.dbDialect = dbDialectCombo.selectedItem as String
         state.mergePolicy = (mergePolicyCombo.selectedItem as MergePolicy).name
+        state.defaultCaseStyle = (caseStyleCombo.selectedItem as WordBuilder.CaseStyle).name
         state.customDatasetJson = customJsonArea.text.trim().ifBlank { null }
         datasetRepository.reload()
         searchIndexRepository.reload()
+        ApplicationManager.getApplication()
+            .messageBus
+            .syncPublisher(StdNamingHoundSettings.TOPIC)
+            .settingsChanged(state)
     }
 
     override fun reset() {
@@ -164,6 +180,9 @@ class StdNamingHoundConfigurable : Configurable {
         enableFuzzyCheck.isSelected = state.enableFuzzy
         dbDialectCombo.selectedItem = state.dbDialect
         mergePolicyCombo.selectedItem = MergePolicy.fromName(state.mergePolicy)
+        caseStyleCombo.selectedItem = runCatching {
+            WordBuilder.CaseStyle.valueOf(state.defaultCaseStyle)
+        }.getOrDefault(WordBuilder.CaseStyle.SNAKE_UPPER)
         customJsonArea.text = state.customDatasetJson.orEmpty()
     }
 

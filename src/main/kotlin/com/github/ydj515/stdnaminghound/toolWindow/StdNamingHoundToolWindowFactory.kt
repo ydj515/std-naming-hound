@@ -11,6 +11,8 @@ import com.github.ydj515.stdnaminghound.model.Word
 import com.github.ydj515.stdnaminghound.model.WordRef
 import com.github.ydj515.stdnaminghound.search.SearchIndexRepository
 import com.github.ydj515.stdnaminghound.settings.StdNamingHoundSettings
+import com.github.ydj515.stdnaminghound.settings.StdNamingHoundSettingsListener
+import com.github.ydj515.stdnaminghound.settings.StdNamingHoundConfigurable
 import com.github.ydj515.stdnaminghound.sql.DbDialect
 import com.github.ydj515.stdnaminghound.sql.SqlFormat
 import com.github.ydj515.stdnaminghound.sql.SqlGenerator
@@ -30,8 +32,9 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextArea
+import com.intellij.ui.EditorTextField
 import com.intellij.ui.SimpleColoredComponent
+import com.intellij.ui.JBColor
 import com.intellij.ui.content.ContentFactory
 import com.intellij.util.Alarm
 import com.intellij.openapi.ide.CopyPasteManager
@@ -39,6 +42,8 @@ import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.util.ui.JBUI
+import com.intellij.openapi.fileTypes.PlainTextFileType
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.github.ydj515.stdnaminghound.search.SearchEngine
 import java.awt.BorderLayout
 import java.awt.FlowLayout
@@ -60,6 +65,11 @@ import javax.swing.UIManager
 import javax.swing.Box
 import javax.swing.JScrollPane
 import javax.swing.JTextArea
+import javax.swing.JList
+import javax.swing.TransferHandler
+import javax.swing.DropMode
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.Transferable
 
 
 class StdNamingHoundToolWindowFactory : ToolWindowFactory {
@@ -72,16 +82,19 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
 
     override fun shouldBeAvailable(project: Project) = true
 
-    class StdNamingHoundToolWindow(toolWindow: ToolWindow) {
+    class StdNamingHoundToolWindow(private val toolWindow: ToolWindow) {
 
         private val datasetRepository = service<DatasetRepository>()
         private val searchIndexRepository = service<SearchIndexRepository>()
         private val searchEngine = SearchEngine(searchIndexRepository)
         private val alarm = Alarm(Alarm.ThreadToUse.POOLED_THREAD, toolWindow.disposable)
+        private val outputAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, toolWindow.disposable)
         private val builder = WordBuilder()
         private val settings = service<StdNamingHoundSettings>()
         private val sqlGenerator = SqlGenerator()
         private val project = toolWindow.project
+        private var currentCaseStyle: WordBuilder.CaseStyle =
+            WordBuilder.CaseStyle.SNAKE_UPPER
 
         fun getContent() = JBPanel<JBPanel<*>>().apply {
             layout = BorderLayout()
@@ -89,17 +102,21 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             val searchField = SearchTextField()
             val listModel = DefaultListModel<SearchItem>()
             val resultList = JBList(listModel)
-            val builderModeCheck = JCheckBox("Builder 모드")
-            val sqlFormatCombo = JComboBox(SqlFormat.entries.toTypedArray()).apply {
-                preferredSize = Dimension(140, preferredSize.height)
+            val termFilterCheck = JCheckBox("용어", true)
+            val wordFilterCheck = JCheckBox("단어", true)
+            val builderModeCheck = JCheckBox("Builder")
+            val settingsButton = JButton(AllIcons.General.GearPlain).apply {
+                toolTipText = "설정 열기"
+                isFocusable = false
+                isContentAreaFilled = false
+                border = JBUI.Borders.empty(2)
+                preferredSize = JBUI.size(20, 20)
             }
-            val sqlButton = JButton(AllIcons.Actions.Execute).apply {
-                toolTipText = "SQL 생성(선택 항목)"
-            }
-            val detailArea = JBTextArea().apply {
-                isEditable = false
-                lineWrap = true
-                wrapStyleWord = true
+            val columnsModel = DefaultListModel<ColumnEntry>()
+            val columnsList = JBList(columnsModel).apply {
+                cellRenderer = ColumnEntryRenderer()
+                dragEnabled = true
+                dropMode = DropMode.INSERT
             }
             val metaLabel = JBLabel()
             val builderPreview = LinkLabel.create("", null).apply {
@@ -107,69 +124,56 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             }
             val tokensPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0))
             val domainCombo = JComboBox<String>()
-            val caseCombo = JComboBox(WordBuilder.CaseStyle.entries.toTypedArray())
-                .apply {
-                    preferredSize = JBUI.size(JBUI.scale(165), preferredSize.height)
-                    maximumSize = JBUI.size(JBUI.scale(165), preferredSize.height)
-                }
             domainCombo.preferredSize = JBUI.size(JBUI.scale(165), domainCombo.preferredSize.height)
             domainCombo.maximumSize = JBUI.size(JBUI.scale(165), domainCombo.preferredSize.height)
-            val previewHeight = caseCombo.preferredSize.height
+            val previewHeight = JBUI.scale(24)
             builderPreview.preferredSize = JBUI.size(JBUI.scale(220), previewHeight)
             builderPreview.minimumSize = JBUI.size(JBUI.scale(120), previewHeight)
             builderPreview.maximumSize = java.awt.Dimension(Int.MAX_VALUE, previewHeight)
             val builderClearButton = JButton(AllIcons.Actions.GC).apply {
                 toolTipText = "Clear Builder"
             }
-            val builderSqlButton = JButton(AllIcons.Actions.Execute).apply {
-                toolTipText = "SQL 생성(Builder)"
+            val addColumnButton = JButton(AllIcons.General.Add).apply {
+                toolTipText = "Add Stage"
+            }
+            val outputArea = EditorTextField("", project, PlainTextFileType.INSTANCE).apply {
+                isViewer = true
+                setOneLineMode(false)
+                preferredSize = Dimension(600, 160)
+            }
+            val outputCopyButton = JButton(AllIcons.Actions.Copy).apply {
+                toolTipText = "SQL 복사"
             }
             var addBuilderMenuItem: JMenuItem? = null
 
             val renderer = SearchItemRenderer()
             resultList.cellRenderer = renderer
 
-            val buttonBar = JPanel(FlowLayout(FlowLayout.LEFT)).apply {
+            val buttonRow = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0)).apply {
+                add(termFilterCheck)
+                add(wordFilterCheck)
                 add(builderModeCheck)
-                add(JBLabel("SQL 형식"))
-                add(sqlFormatCombo)
-                add(sqlButton)
+                add(settingsButton)
+            }
+            val buttonBar = JPanel(java.awt.GridBagLayout()).apply {
+                add(
+                    buttonRow,
+                    java.awt.GridBagConstraints().apply {
+                        anchor = java.awt.GridBagConstraints.CENTER
+                    }
+                )
             }
             val topBar = JPanel(BorderLayout()).apply {
                 add(searchField, BorderLayout.CENTER)
-                add(buttonBar, BorderLayout.SOUTH)
+                add(buttonBar, BorderLayout.EAST)
             }
             val center = JBScrollPane(resultList)
-            val detail = JBScrollPane(detailArea)
             val leftInset = JBUI.scale(12)
             val iconColumnWidth = JBUI.scale(20)
             val iconContentGap = JBUI.scale(8)
             tokensPanel.border = JBUI.Borders.empty()
             val builderControls = JPanel().apply {
                 layout = javax.swing.BoxLayout(this, javax.swing.BoxLayout.Y_AXIS)
-                val row1 = JPanel(BorderLayout()).apply {
-                    val iconPanel = JPanel(BorderLayout()).apply {
-                        add(JBLabel(AllIcons.General.GearPlain), BorderLayout.CENTER)
-                    }.apply {
-                        preferredSize = JBUI.size(iconColumnWidth, preferredSize.height)
-                        minimumSize = JBUI.size(iconColumnWidth, minimumSize.height)
-                        maximumSize = JBUI.size(iconColumnWidth, maximumSize.height)
-                    }
-                    val comboPanel = JPanel(BorderLayout()).apply {
-                        add(caseCombo, BorderLayout.CENTER)
-                    }.apply {
-                        preferredSize = caseCombo.preferredSize
-                        minimumSize = caseCombo.minimumSize
-                        maximumSize = caseCombo.maximumSize
-                    }
-                    val contentPanel = JPanel(BorderLayout()).apply {
-                        border = JBUI.Borders.empty(0, iconContentGap, 0, 0)
-                        add(comboPanel, BorderLayout.WEST)
-                    }
-                    border = JBUI.Borders.empty(0, leftInset, 0, 0)
-                    add(iconPanel, BorderLayout.WEST)
-                    add(contentPanel, BorderLayout.CENTER)
-                }
                 val row2 = JPanel(BorderLayout()).apply {
                     val iconPanel = JPanel(BorderLayout()).apply {
                         add(JBLabel(AllIcons.Actions.Preview), BorderLayout.CENTER)
@@ -207,7 +211,7 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                     val contentPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
                         add(builderClearButton)
                         add(Box.createHorizontalStrut(JBUI.scale(8)))
-                        add(builderSqlButton)
+                        add(addColumnButton)
                     }
                     border = JBUI.Borders.empty(0, leftInset, 0, 0)
                     val contentWithGap = JPanel(BorderLayout()).apply {
@@ -217,7 +221,6 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                     add(spacer, BorderLayout.WEST)
                     add(contentWithGap, BorderLayout.CENTER)
                 }
-                add(row1)
                 add(row2)
                 add(row3)
                 add(row4)
@@ -242,25 +245,68 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 add(tokensRow, BorderLayout.NORTH)
                 add(builderControls, BorderLayout.CENTER)
             }
-            val bottomPanel = JPanel(BorderLayout()).apply {
+            val clearColumnsButton = JButton(AllIcons.Actions.GC).apply {
+                toolTipText = "Clear Stage"
+            }
+            val columnsPanel = JPanel(BorderLayout()).apply {
+                val header = JPanel(BorderLayout()).apply {
+                    add(JBLabel("Stage"), BorderLayout.WEST)
+                    add(clearColumnsButton, BorderLayout.EAST)
+                }
+                val scroll = JBScrollPane(columnsList).apply {
+                    preferredSize = Dimension(600, 140)
+                }
+                add(header, BorderLayout.NORTH)
+                add(scroll, BorderLayout.CENTER)
+            }
+            val stagingPanel = JPanel(BorderLayout()).apply {
                 add(builderPanel, BorderLayout.NORTH)
-                add(detail, BorderLayout.CENTER)
+                add(columnsPanel, BorderLayout.CENTER)
                 add(metaLabel, BorderLayout.SOUTH)
             }
-            val splitPane = JSplitPane(JSplitPane.VERTICAL_SPLIT, center, bottomPanel).apply {
-                resizeWeight = 0.7
+            val outputLabel = JBLabel()
+            val outputPanel = JPanel(BorderLayout()).apply {
+                val header = JPanel(BorderLayout()).apply {
+                    add(outputLabel, BorderLayout.WEST)
+                    add(outputCopyButton, BorderLayout.EAST)
+                }
+                add(header, BorderLayout.NORTH)
+                add(outputArea, BorderLayout.CENTER)
+            }
+            val topPanel = JPanel(BorderLayout()).apply {
+                add(topBar, BorderLayout.NORTH)
+                add(center, BorderLayout.CENTER)
+            }
+            val lowerSplit = JSplitPane(JSplitPane.VERTICAL_SPLIT, stagingPanel, outputPanel).apply {
+                resizeWeight = 0.6
                 isContinuousLayout = true
                 dividerSize = JBUI.scale(6)
-                setDividerLocation(0.65)
+                setDividerLocation(0.6)
+            }
+            val mainSplit = JSplitPane(JSplitPane.VERTICAL_SPLIT, topPanel, lowerSplit).apply {
+                resizeWeight = 0.5
+                isContinuousLayout = true
+                dividerSize = JBUI.scale(6)
+                setDividerLocation(0.5)
             }
 
-            add(topBar, BorderLayout.NORTH)
-            add(splitPane, BorderLayout.CENTER)
+            add(mainSplit, BorderLayout.CENTER)
+
+            val gap = JBUI.scale(6)
+            topPanel.border = JBUI.Borders.empty(0, 0, gap, 0)
+            stagingPanel.border = JBUI.Borders.empty(gap, 0, gap, 0)
+            outputPanel.border = JBUI.Borders.empty(gap, 0, 0, 0)
 
             fun refreshDomainCombo(domains: List<Domain>) {
                 val names = mutableListOf("선택 안 함")
                 names.addAll(domains.map { it.name })
                 domainCombo.model = DefaultComboBoxModel(names.toTypedArray())
+            }
+
+            fun selectDomainByName(name: String?) {
+                val target = name?.trim().orEmpty()
+                if (target.isBlank()) return
+                domainCombo.selectedItem = target
             }
 
             fun refreshMeta() {
@@ -279,18 +325,22 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             }
 
             fun updateResults(query: String) {
-                val allowedTypes = if (builderModeCheck.isSelected) {
-                    setOf(SearchItemType.WORD)
-                } else {
-                    null
+                val allowedTypes = mutableSetOf<SearchItemType>().apply {
+                    if (termFilterCheck.isSelected) add(SearchItemType.TERM)
+                    if (wordFilterCheck.isSelected) add(SearchItemType.WORD)
+                    if (!builderModeCheck.isSelected) {
+                        add(SearchItemType.DOMAIN)
+                    }
+                }
+                if (allowedTypes.isEmpty()) {
+                    listModel.clear()
+                    return
                 }
                 val results = searchEngine.search(query, 50, allowedTypes)
                 listModel.clear()
                 results.forEach { listModel.addElement(it) }
                 if (results.isNotEmpty()) {
                     resultList.selectedIndex = 0
-                } else {
-                    detailArea.text = ""
                 }
             }
 
@@ -315,16 +365,16 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 tokensPanel.revalidate()
                 tokensPanel.repaint()
                 builderClearButton.isEnabled = builder.getTokens().isNotEmpty()
-                builderSqlButton.isEnabled = name.isNotBlank()
+                addColumnButton.isEnabled = name.isNotBlank()
                 builderPreview.revalidate()
                 builderPreview.repaint()
             }
 
             fun updateActionButtons() {
                 val item = resultList.selectedValue
-                val canAdd = builderModeCheck.isSelected && item?.type == SearchItemType.WORD
+                val canAdd = builderModeCheck.isSelected &&
+                    (item?.type == SearchItemType.WORD || item?.type == SearchItemType.TERM)
                 addBuilderMenuItem?.isEnabled = canAdd
-                sqlButton.isEnabled = item?.type == SearchItemType.TERM
             }
 
             fun copyText(text: String) {
@@ -354,14 +404,37 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 }
             }
 
-            fun addSelectedWordToBuilder(item: SearchItem) {
-                if (item.type != SearchItemType.WORD) return
-                val word = datasetRepository.getDataset()
-                    .words
-                    .getOrNull((item.payloadRef as WordRef).index)
-                if (word != null) {
-                    builder.add(word)
-                    updateBuilderPreview()
+            fun addSelectedItemToBuilder(item: SearchItem) {
+                when (item.type) {
+                    SearchItemType.WORD -> {
+                        val word = datasetRepository.getDataset()
+                            .words
+                            .getOrNull((item.payloadRef as WordRef).index)
+                        if (word != null) {
+                            builder.add(word)
+                            updateBuilderPreview()
+                        }
+                    }
+                    SearchItemType.TERM -> {
+                        val term = datasetRepository.getDataset()
+                            .terms
+                            .getOrNull((item.payloadRef as TermRef).index)
+                        if (term != null) {
+                            selectDomainByName(term.domainName)
+                            builder.add(
+                                Word(
+                                    koName = term.koName,
+                                    enName = null,
+                                    abbr = term.abbr,
+                                    description = term.description,
+                                    synonyms = term.synonyms,
+                                    isFormWord = false,
+                                )
+                            )
+                            updateBuilderPreview()
+                        }
+                    }
+                    else -> Unit
                 }
             }
 
@@ -375,31 +448,6 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 val selected = domainCombo.selectedItem as? String ?: return null
                 if (selected == "선택 안 함") return null
                 return findDomainByName(selected)
-            }
-
-            fun buildSqlForSelectedTerm(): String? {
-                val item = resultList.selectedValue ?: return null
-                if (item.type != SearchItemType.TERM) {
-                    Messages.showInfoMessage(project, "TERM을 선택하세요.", "SQL 생성")
-                    return null
-                }
-                val term = datasetRepository.getDataset().terms.getOrNull((item.payloadRef as TermRef).index)
-                if (term == null) {
-                    Messages.showInfoMessage(project, "선택한 TERM을 찾지 못했습니다.", "SQL 생성")
-                    return null
-                }
-                val domain = findDomainByName(term.domainName) ?: defaultDomain()
-                val dialect = DbDialect.fromName(settings.state.dbDialect)
-                val format = sqlFormatCombo.selectedItem as SqlFormat
-                val columnName = term.abbr?.takeIf { it.isNotBlank() } ?: term.koName
-                val result = sqlGenerator.generateColumnSql(
-                    columnName = columnName,
-                    domain = domain,
-                    description = term.koName,
-                    dialect = dialect,
-                    format = format,
-                )
-                return result.sql
             }
 
             fun findDomainForBuilder(): Domain {
@@ -421,25 +469,147 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 }
             }
 
-            fun buildSqlForBuilder(): String? {
+            fun buildColumnEntryForBuilder(): ColumnEntry? {
                 val name = builder.buildName()
                 if (name.isBlank()) {
-                    Messages.showInfoMessage(project, "Builder 결과가 없습니다.", "SQL 생성")
+                    Messages.showInfoMessage(project, "Builder 결과가 없습니다.", "컬럼 추가")
                     return null
                 }
                 val domain = findDomainForBuilder()
                 val dialect = DbDialect.fromName(settings.state.dbDialect)
-                val format = sqlFormatCombo.selectedItem as SqlFormat
                 val comment = builder.getTokens().joinToString(" ") { it.koName }
                 val result = sqlGenerator.generateColumnSql(
                     columnName = name,
                     domain = domain,
                     description = comment,
                     dialect = dialect,
-                    format = format,
+                    format = SqlFormat.COLUMN_DEFINITION,
                 )
-                return result.sql
+                val parts = splitColumnSql(result.sql)
+                return ColumnEntry(
+                    name = name,
+                    definition = parts.definition,
+                    commentSql = parts.commentSql,
+                    domainName = domain.name,
+                    description = comment,
+                )
             }
+
+            fun buildColumnOutputFromColumns(): String {
+                if (columnsModel.size == 0) return ""
+                return columnsModel.elements().asSequence()
+                    .flatMap { entry ->
+                        sequenceOf(entry.definition, entry.commentSql)
+                            .filterNot { it.isNullOrBlank() }
+                            .map { it!!.trim() }
+                    }
+                    .joinToString("\n")
+            }
+
+            fun buildCreateTableFromColumns(): String {
+                if (columnsModel.size == 0) return ""
+                val dialect = DbDialect.fromName(settings.state.dbDialect)
+                val definitions = columnsModel.elements().asSequence()
+                    .map { it.definition }
+                    .toList()
+                val create = "CREATE TABLE TABLE_NAME (\n  ${definitions.joinToString(",\n  ")}\n);"
+                if (dialect == DbDialect.MYSQL) {
+                    return create
+                }
+                val comments = columnsModel.elements().asSequence()
+                    .map { it.commentSql }
+                    .filterNot { it.isNullOrBlank() }
+                    .toList()
+                return if (comments.isEmpty()) create else "$create\n${comments.joinToString("\n")}"
+            }
+
+            fun buildOutputSql(): String {
+                return buildCreateTableFromColumns()
+            }
+
+            fun updateOutputLabel() {
+                outputLabel.text = "Output (SQL - ${settings.state.dbDialect})"
+            }
+
+            fun updateOutputPreview() {
+                updateOutputLabel()
+                outputArea.text = buildOutputSql()
+            }
+
+            fun scheduleOutputRefresh() {
+                outputAlarm.cancelAllRequests()
+                outputAlarm.addRequest({
+                    updateOutputPreview()
+                }, 300)
+            }
+
+            fun rebuildColumnEntriesForDialect() {
+                if (columnsModel.size == 0) return
+                val dialect = DbDialect.fromName(settings.state.dbDialect)
+                val updated = columnsModel.elements().asSequence()
+                    .map { entry ->
+                        val domain = findDomainByName(entry.domainName) ?: defaultDomain()
+                        val result = sqlGenerator.generateColumnSql(
+                            columnName = entry.name,
+                            domain = domain,
+                            description = entry.description,
+                            dialect = dialect,
+                            format = SqlFormat.COLUMN_DEFINITION,
+                        )
+                        val parts = splitColumnSql(result.sql)
+                        entry.copy(
+                            definition = parts.definition,
+                            commentSql = parts.commentSql,
+                            domainName = domain.name,
+                        )
+                    }
+                    .toList()
+                columnsModel.removeAllElements()
+                updated.forEach { columnsModel.addElement(it) }
+            }
+
+            columnsList.transferHandler = ColumnReorderTransferHandler(columnsList) {
+                scheduleOutputRefresh()
+            }
+
+            val columnsPopup = JPopupMenu().apply {
+                val removeItem = JMenuItem("컬럼 삭제", AllIcons.Actions.DeleteTag)
+                add(removeItem)
+                removeItem.addActionListener {
+                    val index = columnsList.selectedIndex
+                    if (index < 0) return@addActionListener
+                    val entry = columnsModel.getElementAt(index)
+                    val result = Messages.showYesNoDialog(
+                        project,
+                        "${entry.name} 컬럼을 삭제하시겠습니까?",
+                        "컬럼 삭제",
+                        null
+                    )
+                    if (result == Messages.YES) {
+                        columnsModel.remove(index)
+                        scheduleOutputRefresh()
+                    }
+                }
+            }
+            columnsList.addMouseListener(object : java.awt.event.MouseAdapter() {
+                override fun mousePressed(e: java.awt.event.MouseEvent) {
+                    if (e.isPopupTrigger) showColumnsPopup(e)
+                }
+
+                override fun mouseReleased(e: java.awt.event.MouseEvent) {
+                    if (e.isPopupTrigger) showColumnsPopup(e)
+                }
+
+                private fun showColumnsPopup(e: java.awt.event.MouseEvent) {
+                    val index = columnsList.locationToIndex(e.point)
+                    if (index >= 0) {
+                        columnsList.selectedIndex = index
+                        applyPopupTheme(columnsPopup)
+                        columnsPopup.updateUI()
+                        columnsPopup.show(columnsList, e.x, e.y)
+                    }
+                }
+            })
 
             searchField.textEditor.document.addDocumentListener(object : javax.swing.event.DocumentListener {
                 override fun insertUpdate(e: javax.swing.event.DocumentEvent?) = schedule()
@@ -457,15 +627,26 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 }
             })
 
+            columnsModel.addListDataListener(object : javax.swing.event.ListDataListener {
+                override fun intervalAdded(e: javax.swing.event.ListDataEvent?) = scheduleOutputRefresh()
+                override fun intervalRemoved(e: javax.swing.event.ListDataEvent?) = scheduleOutputRefresh()
+                override fun contentsChanged(e: javax.swing.event.ListDataEvent?) = scheduleOutputRefresh()
+            })
+
             resultList.addListSelectionListener {
-                val item = resultList.selectedValue ?: return@addListSelectionListener
-                detailArea.text = buildDetailText(item)
+                resultList.selectedValue ?: return@addListSelectionListener
                 updateActionButtons()
             }
 
             builderModeCheck.addActionListener {
                 updateResults(searchField.text)
                 updateActionButtons()
+            }
+            termFilterCheck.addActionListener {
+                updateResults(searchField.text)
+            }
+            wordFilterCheck.addActionListener {
+                updateResults(searchField.text)
             }
 
             val popupMenu = JPopupMenu().apply {
@@ -485,7 +666,7 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 }
                 addBuilderMenuItem?.addActionListener {
                     val item = resultList.selectedValue ?: return@addActionListener
-                    addSelectedWordToBuilder(item)
+                    addSelectedItemToBuilder(item)
                 }
             }
 
@@ -504,9 +685,7 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                         if (index >= 0) {
                             resultList.selectedIndex = index
                             val item = resultList.selectedValue ?: return
-                            if (item.type == SearchItemType.WORD) {
-                                addSelectedWordToBuilder(item)
-                            }
+                            addSelectedItemToBuilder(item)
                         }
                     }
                 }
@@ -516,7 +695,7 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                     if (index >= 0) {
                         resultList.selectedIndex = index
                         updateActionButtons()
-                        applyMenuHoverColors(resultList)
+                        applyPopupTheme(popupMenu)
                         popupMenu.updateUI()
                         popupMenu.show(resultList, e.x, e.y)
                     }
@@ -546,19 +725,45 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 }
             })
 
-            caseCombo.addActionListener {
-                val style = caseCombo.selectedItem as? WordBuilder.CaseStyle ?: return@addActionListener
-                builder.setCaseStyle(style)
-                updateBuilderPreview()
-            }
             builderClearButton.addActionListener {
                 builder.clear()
+                domainCombo.selectedItem = "선택 안 함"
                 updateBuilderPreview()
             }
-            builderSqlButton.addActionListener {
-                val sql = buildSqlForBuilder()
-                if (sql != null) {
-                    SqlPreviewDialog(project, sql, ::copyText, ::insertText).show()
+            addColumnButton.addActionListener {
+                val entry = buildColumnEntryForBuilder()
+                if (entry != null) {
+                    if (columnsModel.containsName(entry.name)) {
+                        Messages.showInfoMessage(project, "이미 Stage에 추가된 컬럼입니다: ${entry.name}", "Add Stage Failed")
+                        return@addActionListener
+                    }
+                    columnsModel.addElement(entry)
+                    builder.clear()
+                    domainCombo.selectedItem = "선택 안 함"
+                    updateBuilderPreview()
+                }
+            }
+            outputCopyButton.addActionListener {
+                val text = buildOutputSql()
+                copyText(text)
+                if (text.isNotBlank()) {
+                    showCopiedToast(text)
+                }
+            }
+            settingsButton.addActionListener {
+                ShowSettingsUtil.getInstance().showSettingsDialog(project, StdNamingHoundConfigurable::class.java)
+            }
+            clearColumnsButton.addActionListener {
+                if (columnsModel.size == 0) return@addActionListener
+                val result = Messages.showYesNoDialog(
+                    project,
+                    "모든 컬럼을 삭제하시겠습니까?",
+                    "컬럼 삭제",
+                    null
+                )
+                if (result == Messages.YES) {
+                    columnsModel.removeAllElements()
+                    scheduleOutputRefresh()
                 }
             }
             builderPreview.setListener({ _, _ ->
@@ -566,13 +771,6 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 copyText(text)
                 showCopiedToast(text)
             }, null)
-
-            sqlButton.addActionListener {
-                val sql = buildSqlForSelectedTerm()
-                if (sql != null) {
-                    SqlPreviewDialog(project, sql, ::copyText, ::insertText).show()
-                }
-            }
 
             val menuMask = Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
             val inputMap = resultList.getInputMap(JComponent.WHEN_FOCUSED)
@@ -595,26 +793,60 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             actionMap.put("addBuilder", object : javax.swing.AbstractAction() {
                 override fun actionPerformed(e: java.awt.event.ActionEvent?) {
                     val item = resultList.selectedValue ?: return
-                    addSelectedWordToBuilder(item)
+                    addSelectedItemToBuilder(item)
                 }
             })
 
             refreshMeta()
+            currentCaseStyle = runCatching {
+                WordBuilder.CaseStyle.valueOf(settings.state.defaultCaseStyle)
+            }.getOrDefault(WordBuilder.CaseStyle.SNAKE_UPPER)
+            builder.setCaseStyle(currentCaseStyle)
             updateBuilderPreview()
             updateActionButtons()
-        }
+            updateOutputPreview()
 
-        private fun applyMenuHoverColors(list: javax.swing.JList<*>) {
-            val bg = list.selectionBackground
-            val fg = list.selectionForeground
-            UIManager.put("MenuItem.selectionBackground", bg)
-            UIManager.put("MenuItem.selectionForeground", fg)
-            UIManager.put("Menu.selectionBackground", bg)
-            UIManager.put("Menu.selectionForeground", fg)
-            UIManager.put("MenuItem.acceleratorSelectionForeground", fg)
+            val connection = ApplicationManager.getApplication().messageBus.connect(toolWindow.disposable)
+            connection.subscribe(StdNamingHoundSettings.TOPIC, object : StdNamingHoundSettingsListener {
+                override fun settingsChanged(state: StdNamingHoundSettings.State) {
+                    val style = runCatching {
+                        WordBuilder.CaseStyle.valueOf(state.defaultCaseStyle)
+                    }.getOrDefault(WordBuilder.CaseStyle.SNAKE_UPPER)
+                    currentCaseStyle = style
+                    builder.setCaseStyle(currentCaseStyle)
+                    updateBuilderPreview()
+                    updateOutputLabel()
+                    rebuildColumnEntriesForDialect()
+                    scheduleOutputRefresh()
+                }
+            })
         }
 
         private fun defaultDomain(): Domain = DEFAULT_DOMAIN
+
+        private fun applyPopupTheme(popup: JPopupMenu) {
+            val bg = UIManager.getColor("PopupMenu.background") ?: UIManager.getColor("Menu.background")
+            val fg = UIManager.getColor("PopupMenu.foreground") ?: UIManager.getColor("Menu.foreground")
+            if (bg != null) {
+                popup.background = bg
+                popup.isOpaque = true
+            }
+            if (fg != null) {
+                popup.foreground = fg
+            }
+            for (i in 0 until popup.componentCount) {
+                val comp = popup.getComponent(i)
+                if (comp is JMenuItem) {
+                    if (bg != null) {
+                        comp.background = bg
+                        comp.isOpaque = true
+                    }
+                    if (fg != null) {
+                        comp.foreground = fg
+                    }
+                }
+            }
+        }
 
         companion object {
             private val DEFAULT_DOMAIN = Domain(
@@ -628,72 +860,11 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             )
         }
 
-        private fun buildDetailText(item: SearchItem): String {
-            val dataset = datasetRepository.getDataset()
-            return when (item.type) {
-                SearchItemType.TERM -> {
-                    val term = dataset.terms.getOrNull((item.payloadRef as TermRef).index)
-                    term?.toDetailText().orEmpty()
-                }
-                SearchItemType.WORD -> {
-                    val word = dataset.words.getOrNull((item.payloadRef as WordRef).index)
-                    word?.toDetailText().orEmpty()
-                }
-                SearchItemType.DOMAIN -> {
-                    val domain = dataset.domains.getOrNull((item.payloadRef as DomainRef).index)
-                    domain?.toDetailText().orEmpty()
-                }
-            }
-        }
-
         private fun showCopiedToast(text: String) {
             NotificationGroupManager.getInstance()
                 .getNotificationGroup("StdNamingHound")
                 .createNotification("${text} 복사됨", NotificationType.INFORMATION)
                 .notify(project)
-        }
-
-        private fun Term.toDetailText(): String {
-            return buildString {
-                append("용어: ").append(koName).append("\n")
-                if (!abbr.isNullOrBlank()) append("약어: ").append(abbr).append("\n")
-                if (!domainName.isNullOrBlank()) append("도메인: ").append(domainName).append("\n")
-                if (!description.isNullOrBlank()) append("설명: ").append(description).append("\n")
-                if (synonyms.isNotEmpty()) append("동의어: ").append(synonyms.joinToString(", ")).append("\n")
-            }
-        }
-
-        private fun Word.toDetailText(): String {
-            return buildString {
-                append("단어: ").append(koName).append("\n")
-                if (!enName.isNullOrBlank()) append("영문명: ").append(enName).append("\n")
-                if (!abbr.isNullOrBlank()) append("약어: ").append(abbr).append("\n")
-                append("형식단어: ").append(if (isFormWord) "Y" else "N").append("\n")
-                if (!description.isNullOrBlank()) append("설명: ").append(description).append("\n")
-                if (synonyms.isNotEmpty()) append("동의어: ").append(synonyms.joinToString(", ")).append("\n")
-            }
-        }
-
-        private fun Domain.toDetailText(): String {
-            val size = buildString {
-                val len = length?.toString()
-                val sc = scale?.toString()
-                if (!len.isNullOrBlank()) {
-                    append(len)
-                    if (!sc.isNullOrBlank()) {
-                        append(",")
-                        append(sc)
-                    }
-                }
-            }
-            return buildString {
-                append("도메인: ").append(name).append("\n")
-                if (!dataType.isNullOrBlank()) append("타입: ").append(dataType).append("\n")
-                if (size.isNotBlank()) append("길이/스케일: ").append(size).append("\n")
-                if (!storageFormat.isNullOrBlank()) append("저장형식: ").append(storageFormat).append("\n")
-                if (!displayFormat.isNullOrBlank()) append("표시형식: ").append(displayFormat).append("\n")
-                if (!allowedValues.isNullOrBlank()) append("허용값: ").append(allowedValues).append("\n")
-            }
         }
     }
 }
@@ -735,10 +906,97 @@ private class SqlPreviewDialog(
     }
 }
 
+private data class ColumnParts(
+    val definition: String,
+    val commentSql: String?,
+)
+
+private fun splitColumnSql(sql: String): ColumnParts {
+    val lines = sql.split("\n")
+    val definition = lines.firstOrNull()?.trim()?.removeSuffix(";").orEmpty()
+    val comment = lines.drop(1).joinToString("\n").trim().ifBlank { null }
+    return ColumnParts(definition, comment)
+}
+
+private fun DefaultListModel<ColumnEntry>.containsName(name: String): Boolean {
+    return this.elements().asSequence().any { it.name == name }
+}
+
+private class ColumnEntryTransferable(
+    private val entry: ColumnEntry,
+    private val flavor: DataFlavor,
+) : Transferable {
+    override fun getTransferDataFlavors(): Array<DataFlavor> = arrayOf(flavor)
+
+    override fun isDataFlavorSupported(flavor: DataFlavor): Boolean = flavor == this.flavor
+
+    override fun getTransferData(flavor: DataFlavor): Any {
+        if (!isDataFlavorSupported(flavor)) {
+            throw java.awt.datatransfer.UnsupportedFlavorException(flavor)
+        }
+        return entry
+    }
+}
+
+private class ColumnReorderTransferHandler(
+    private val list: JList<ColumnEntry>,
+    private val onChanged: () -> Unit,
+) : TransferHandler() {
+    private val flavor = DataFlavor(ColumnEntry::class.java, "ColumnEntry")
+    private var fromIndex = -1
+
+    override fun getSourceActions(c: JComponent): Int = MOVE
+
+    override fun createTransferable(c: JComponent): Transferable? {
+        fromIndex = list.selectedIndex
+        val value = list.selectedValue ?: return null
+        return ColumnEntryTransferable(value, flavor)
+    }
+
+    override fun canImport(support: TransferSupport): Boolean {
+        return support.isDrop && support.isDataFlavorSupported(flavor)
+    }
+
+    override fun importData(support: TransferSupport): Boolean {
+        if (!canImport(support)) return false
+        val dropLocation = support.dropLocation as JList.DropLocation
+        val toIndex = dropLocation.index
+        val model = list.model as DefaultListModel<ColumnEntry>
+        val data = support.transferable.getTransferData(flavor) as ColumnEntry
+        if (fromIndex < 0 || toIndex < 0) return false
+        model.remove(fromIndex)
+        val insertIndex = if (toIndex > fromIndex) toIndex - 1 else toIndex
+        model.add(insertIndex, data)
+        list.selectedIndex = insertIndex
+        fromIndex = -1
+        onChanged()
+        return true
+    }
+}
+
+private class ColumnEntryRenderer : javax.swing.ListCellRenderer<ColumnEntry> {
+    private val label = com.intellij.ui.components.JBLabel()
+
+    override fun getListCellRendererComponent(
+        list: javax.swing.JList<out ColumnEntry>,
+        value: ColumnEntry,
+        index: Int,
+        isSelected: Boolean,
+        cellHasFocus: Boolean,
+    ): java.awt.Component {
+        label.text = value.definition
+        label.foreground = if (isSelected) list.selectionForeground else list.foreground
+        label.background = if (isSelected) list.selectionBackground else list.background
+        label.isOpaque = true
+        label.border = javax.swing.BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        return label
+    }
+}
+
 private class SearchItemRenderer : javax.swing.ListCellRenderer<SearchItem> {
     private val panel = JBPanel<JBPanel<*>>(BorderLayout())
     private val title = SimpleColoredComponent()
-    private val sub = com.intellij.ui.components.JBLabel()
+    private val sub = SimpleColoredComponent()
     var hoverIndex: Int = -1
 
     override fun getListCellRendererComponent(
@@ -753,36 +1011,53 @@ private class SearchItemRenderer : javax.swing.ListCellRenderer<SearchItem> {
             SearchItemType.WORD -> "[단어]"
             SearchItemType.DOMAIN -> "[도메인]"
         }
+        val koName = value.titleKo
+        val abbr = value.abbr
+        val en = value.primaryEn
+        val desc = value.subText.orEmpty()
+
         title.clear()
         title.append(badge, com.intellij.ui.SimpleTextAttributes.GRAYED_ATTRIBUTES)
         title.append(" ", com.intellij.ui.SimpleTextAttributes.REGULAR_ATTRIBUTES)
-        title.append(value.titleKo, com.intellij.ui.SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
-        val en = value.primaryEn
-        if (!en.isNullOrBlank()) {
-            title.append("  |  ", com.intellij.ui.SimpleTextAttributes.GRAYED_ATTRIBUTES)
-            title.append(en, com.intellij.ui.SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
+        title.append(koName, com.intellij.ui.SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
+        if (!abbr.isNullOrBlank() && abbr != koName) {
+            title.append("  ", com.intellij.ui.SimpleTextAttributes.REGULAR_ATTRIBUTES)
+            title.append("[$abbr]", com.intellij.ui.SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
         }
-        val abbr = value.abbr
-        if (!abbr.isNullOrBlank() && abbr != en) {
-            title.append("  |  ", com.intellij.ui.SimpleTextAttributes.GRAYED_ATTRIBUTES)
-            title.append(abbr, com.intellij.ui.SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
+
+        sub.clear()
+        val subText = buildString {
+            if (!en.isNullOrBlank()) append(en)
+            if (desc.isNotBlank()) {
+                if (isNotEmpty()) append("  |  ")
+                append(ellipsize(desc, 80))
+            }
         }
-        sub.text = value.subText.orEmpty()
+        sub.append(subText, com.intellij.ui.SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        sub.toolTipText = desc.ifBlank { null }
         val hover = index == hoverIndex && !isSelected
         val fg = when {
             isSelected || hover -> list.selectionForeground
             else -> list.foreground
         }
         title.foreground = fg
-        sub.foreground = fg
+        sub.foreground = if (isSelected || hover) fg else JBColor.GRAY
         panel.background = when {
             isSelected || hover -> list.selectionBackground
             else -> list.background
         }
-        panel.border = javax.swing.BorderFactory.createEmptyBorder(6, 8, 6, 8)
+        panel.border = javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10)
         panel.removeAll()
         panel.add(title, BorderLayout.NORTH)
         panel.add(sub, BorderLayout.SOUTH)
         return panel
+    }
+
+    private fun ellipsize(text: String, max: Int): String {
+        val trimmed = text.trim()
+        if (max <= 0) return ""
+        if (max <= 3) return trimmed.take(max)
+        if (trimmed.length <= max) return trimmed
+        return trimmed.substring(0, max - 3) + "..."
     }
 }
