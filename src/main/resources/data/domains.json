@@ -1,0 +1,1163 @@
+[
+  {
+    "name": "가격N9,2",
+    "dataType": "NUMERIC",
+    "length": 9,
+    "scale": 2,
+    "storageFormat": 9999999.99,
+    "displayFormat": 9999999.99,
+    "allowedValues": null
+  },
+  {
+    "name": "가격N10",
+    "dataType": "NUMERIC",
+    "length": 10,
+    "scale": null,
+    "storageFormat": "9999999999",
+    "displayFormat": "9,999,999,999",
+    "allowedValues": null
+  },
+  {
+    "name": "가격N15",
+    "dataType": "NUMERIC",
+    "length": 15,
+    "scale": null,
+    "storageFormat": "999999999999999",
+    "displayFormat": "999,999,999,999,999",
+    "allowedValues": null
+  },
+  {
+    "name": "금액N13",
+    "dataType": "NUMERIC",
+    "length": 13,
+    "scale": null,
+    "storageFormat": "9999999999999",
+    "displayFormat": "9,999,999,999,999",
+    "allowedValues": null
+  },
+  {
+    "name": "금액N15",
+    "dataType": "NUMERIC",
+    "length": 15,
+    "scale": null,
+    "storageFormat": "999999999999999",
+    "displayFormat": "999,999,999,999,999",
+    "allowedValues": null
+  },
+  {
+    "name": "금액N17",
+    "dataType": "NUMERIC",
+    "length": 17,
+    "scale": null,
+    "storageFormat": "99999999999999999",
+    "displayFormat": "99,999,999,999,999,999",
+    "allowedValues": null
+  },
+  {
+    "name": "금액N18",
+    "dataType": "NUMERIC",
+    "length": 18,
+    "scale": null,
+    "storageFormat": "999999999999999999",
+    "displayFormat": "999,999,999,999,999,999",
+    "allowedValues": null
+  },
+  {
+    "name": "금액N22,2",
+    "dataType": "NUMERIC",
+    "length": 22,
+    "scale": 2,
+    "storageFormat": "99999999999999999999.99",
+    "displayFormat": "99,999,999,999,999,999,999.99",
+    "allowedValues": null
+  },
+  {
+    "name": "비용N15",
+    "dataType": "NUMERIC",
+    "length": 15,
+    "scale": null,
+    "storageFormat": "999999999999999",
+    "displayFormat": "999,999,999,999,999",
+    "allowedValues": null
+  },
+  {
+    "name": "요금N15",
+    "dataType": "NUMERIC",
+    "length": 15,
+    "scale": null,
+    "storageFormat": "999999999999999",
+    "displayFormat": "999,999,999,999,999",
+    "allowedValues": null
+  },
+  {
+    "name": "요금N22,2",
+    "dataType": "NUMERIC",
+    "length": 22,
+    "scale": 2,
+    "storageFormat": "99999999999999999999.99",
+    "displayFormat": "99,999,999,999,999,999,999.99",
+    "allowedValues": null
+  },
+  {
+    "name": "시분C4",
+    "dataType": "CHAR",
+    "length": 4,
+    "scale": null,
+    "storageFormat": "HH24MI",
+    "displayFormat": "HH:MI",
+    "allowedValues": "HH : 00~23, \nMI : 00~59"
+  },
+  {
+    "name": "시분초C6",
+    "dataType": "CHAR",
+    "length": 6,
+    "scale": null,
+    "storageFormat": "HH24MISS",
+    "displayFormat": "HH:MI:SS",
+    "allowedValues": "HH : 00~23, \nMI : 00~59, \nSS : 00~59"
+  },
+  {
+    "name": "연도C4",
+    "dataType": "CHAR",
+    "length": 4,
+    "scale": null,
+    "storageFormat": "YYYY",
+    "displayFormat": "YYYY",
+    "allowedValues": "YYYY : 0001~9999"
+  },
+  {
+    "name": "연월C6",
+    "dataType": "CHAR",
+    "length": 6,
+    "scale": null,
+    "storageFormat": "YYYYMM",
+    "displayFormat": "YYYY-MM",
+    "allowedValues": "YYYY : 0001~9999,\nMM : 01~12"
+  },
+  {
+    "name": "연월일C8",
+    "dataType": "CHAR",
+    "length": 8,
+    "scale": null,
+    "storageFormat": "YYYYMMDD",
+    "displayFormat": "YYYY-MM-DD",
+    "allowedValues": "YYYY : 0001~9999,\nMM : 01~12, DD : 01~31"
+  },
+  {
+    "name": "연월일시분C12",
+    "dataType": "CHAR",
+    "length": 12,
+    "scale": null,
+    "storageFormat": "YYYYMMDDHH24MI",
+    "displayFormat": "YYYY-MM-DD HH:MI",
+    "allowedValues": "YYYY : 0001~9999,\nMM : 01~12, DD : 01~31, HH : 00~23, \nMI : 00~59"
+  },
+  {
+    "name": "연월일시분초C14",
+    "dataType": "CHAR",
+    "length": 14,
+    "scale": null,
+    "storageFormat": "YYYYMMDDHH24MISS",
+    "displayFormat": "YYYY-MM-DD HH:MI:SS",
+    "allowedValues": "YYYY : 0001~9999,\nMM : 01~12, DD : 01~31, HH : 00~23, \nMI : 00~59, SS : 00~59"
+  },
+  {
+    "name": "연월일시분초D",
+    "dataType": "DATETIME",
+    "length": null,
+    "scale": null,
+    "storageFormat": "YYYYMMDDHH24MISS",
+    "displayFormat": "YYYY-MM-DD HH:MI:SS",
+    "allowedValues": "YYYY : 0001~9999,\nMM : 01~12, DD : 01~31, HH : 00~23, \nMI : 00~59, SS : 00~59"
+  },
+  {
+    "name": "월C2",
+    "dataType": "CHAR",
+    "length": 2,
+    "scale": null,
+    "storageFormat": "MM",
+    "displayFormat": "MM",
+    "allowedValues": "MM : 01~12"
+  },
+  {
+    "name": "내용V1000",
+    "dataType": "VARCHAR",
+    "length": 1000,
+    "scale": null,
+    "storageFormat": "1000자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "내용V2000",
+    "dataType": "VARCHAR",
+    "length": 2000,
+    "scale": null,
+    "storageFormat": "2000자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "내용V4000",
+    "dataType": "VARCHAR",
+    "length": 4000,
+    "scale": null,
+    "storageFormat": "4000자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "명V5",
+    "dataType": "VARCHAR",
+    "length": 5,
+    "scale": null,
+    "storageFormat": "5자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "명V20",
+    "dataType": "VARCHAR",
+    "length": 20,
+    "scale": null,
+    "storageFormat": "20자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "명V40",
+    "dataType": "VARCHAR",
+    "length": 40,
+    "scale": null,
+    "storageFormat": "40자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "명V80",
+    "dataType": "VARCHAR",
+    "length": 80,
+    "scale": null,
+    "storageFormat": "80자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "명V100",
+    "dataType": "VARCHAR",
+    "length": 100,
+    "scale": null,
+    "storageFormat": "100자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "명V200",
+    "dataType": "VARCHAR",
+    "length": 200,
+    "scale": null,
+    "storageFormat": "200자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "명V256",
+    "dataType": "VARCHAR",
+    "length": 256,
+    "scale": null,
+    "storageFormat": "256자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "명V300",
+    "dataType": "VARCHAR",
+    "length": 300,
+    "scale": null,
+    "storageFormat": "300자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "상세주소V200",
+    "dataType": "VARCHAR",
+    "length": 200,
+    "scale": null,
+    "storageFormat": "200자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "주소V15",
+    "dataType": "VARCHAR",
+    "length": 15,
+    "scale": null,
+    "storageFormat": "15자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "주소V17",
+    "dataType": "VARCHAR",
+    "length": 17,
+    "scale": null,
+    "storageFormat": "17자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "주소V200",
+    "dataType": "VARCHAR",
+    "length": 200,
+    "scale": null,
+    "storageFormat": "200자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "주소V320",
+    "dataType": "VARCHAR",
+    "length": 320,
+    "scale": null,
+    "storageFormat": "320자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "주소V2000",
+    "dataType": "VARCHAR",
+    "length": 2000,
+    "scale": null,
+    "storageFormat": "2000자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "건물번호V10",
+    "dataType": "VARCHAR",
+    "length": 10,
+    "scale": null,
+    "storageFormat": "10자리 이내 문자",
+    "displayFormat": "99999-99999",
+    "allowedValues": null
+  },
+  {
+    "name": "건물본번N5",
+    "dataType": "NUMERIC",
+    "length": 5,
+    "scale": null,
+    "storageFormat": "99999",
+    "displayFormat": "99999",
+    "allowedValues": null
+  },
+  {
+    "name": "건물부번N5",
+    "dataType": "NUMERIC",
+    "length": 5,
+    "scale": null,
+    "storageFormat": "99999",
+    "displayFormat": "99999",
+    "allowedValues": null
+  },
+  {
+    "name": "계좌번호V20",
+    "dataType": "VARCHAR",
+    "length": 20,
+    "scale": null,
+    "storageFormat": "20자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "구우편번호C6",
+    "dataType": "CHAR",
+    "length": 6,
+    "scale": null,
+    "storageFormat": "6자리 문자",
+    "displayFormat": "999-999",
+    "allowedValues": null
+  },
+  {
+    "name": "번호C6",
+    "dataType": "CHAR",
+    "length": 6,
+    "scale": null,
+    "storageFormat": "6자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호C7",
+    "dataType": "CHAR",
+    "length": 7,
+    "scale": null,
+    "storageFormat": "7자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호C8",
+    "dataType": "CHAR",
+    "length": 8,
+    "scale": null,
+    "storageFormat": "8자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호C9",
+    "dataType": "CHAR",
+    "length": 9,
+    "scale": null,
+    "storageFormat": "9자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호C10",
+    "dataType": "CHAR",
+    "length": 10,
+    "scale": null,
+    "storageFormat": "10자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호C13",
+    "dataType": "CHAR",
+    "length": 13,
+    "scale": null,
+    "storageFormat": "13자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호C24",
+    "dataType": "CHAR",
+    "length": 24,
+    "scale": null,
+    "storageFormat": "24자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V3",
+    "dataType": "VARCHAR",
+    "length": 3,
+    "scale": null,
+    "storageFormat": "3자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V4",
+    "dataType": "VARCHAR",
+    "length": 4,
+    "scale": null,
+    "storageFormat": "4자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V5",
+    "dataType": "VARCHAR",
+    "length": 5,
+    "scale": null,
+    "storageFormat": "5자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V6",
+    "dataType": "VARCHAR",
+    "length": 6,
+    "scale": null,
+    "storageFormat": "6자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V8",
+    "dataType": "VARCHAR",
+    "length": 8,
+    "scale": null,
+    "storageFormat": "8자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V10",
+    "dataType": "VARCHAR",
+    "length": 10,
+    "scale": null,
+    "storageFormat": "10자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V14",
+    "dataType": "VARCHAR",
+    "length": 14,
+    "scale": null,
+    "storageFormat": "14자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V15",
+    "dataType": "VARCHAR",
+    "length": 15,
+    "scale": null,
+    "storageFormat": "15자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V17",
+    "dataType": "VARCHAR",
+    "length": 17,
+    "scale": null,
+    "storageFormat": "17자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V20",
+    "dataType": "VARCHAR",
+    "length": 20,
+    "scale": null,
+    "storageFormat": "20자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V25",
+    "dataType": "VARCHAR",
+    "length": 25,
+    "scale": null,
+    "storageFormat": "25자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V50",
+    "dataType": "VARCHAR",
+    "length": 50,
+    "scale": null,
+    "storageFormat": "50자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V64",
+    "dataType": "VARCHAR",
+    "length": 64,
+    "scale": null,
+    "storageFormat": "64자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V88",
+    "dataType": "VARCHAR",
+    "length": 88,
+    "scale": null,
+    "storageFormat": "88자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호V100",
+    "dataType": "VARCHAR",
+    "length": 100,
+    "scale": null,
+    "storageFormat": "100자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "법인등록번호C13",
+    "dataType": "CHAR",
+    "length": 13,
+    "scale": null,
+    "storageFormat": "13자리 문자",
+    "displayFormat": "999999-9999999",
+    "allowedValues": null
+  },
+  {
+    "name": "본번N4",
+    "dataType": "NUMERIC",
+    "length": 4,
+    "scale": null,
+    "storageFormat": "9999",
+    "displayFormat": "9999",
+    "allowedValues": null
+  },
+  {
+    "name": "부번N4",
+    "dataType": "NUMERIC",
+    "length": 4,
+    "scale": null,
+    "storageFormat": "9999",
+    "displayFormat": "9999",
+    "allowedValues": null
+  },
+  {
+    "name": "사업자등록번호C10",
+    "dataType": "CHAR",
+    "length": 10,
+    "scale": null,
+    "storageFormat": "10자리 문자",
+    "displayFormat": "999-99-99999",
+    "allowedValues": null
+  },
+  {
+    "name": "신용카드번호V16",
+    "dataType": "VARCHAR",
+    "length": 16,
+    "scale": null,
+    "storageFormat": "16자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "아이핀번호C13",
+    "dataType": "CHAR",
+    "length": 13,
+    "scale": null,
+    "storageFormat": "13자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "암호화번호V256",
+    "dataType": "VARCHAR",
+    "length": 256,
+    "scale": null,
+    "storageFormat": "256자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "여권번호C9",
+    "dataType": "CHAR",
+    "length": 9,
+    "scale": null,
+    "storageFormat": "9자리 문자",
+    "displayFormat": "M99999999\nS99999999\nR99999999\nG99999999\nD99999999\nT99999999",
+    "allowedValues": "M(복수여권)\nS(단수여권)\nR(거주여권)\nG(관용여권)\nD(외교관여권)\nT(여행증명서)"
+  },
+  {
+    "name": "외국인등록번호C13",
+    "dataType": "CHAR",
+    "length": 13,
+    "scale": null,
+    "storageFormat": "13자리 문자",
+    "displayFormat": "999999-9999999",
+    "allowedValues": "(7번째 자리)\n - 1900년대\n 남(5),여(6)\n - 2000년대\n 남(7),여(8)\n(12번째 자리) \n - 외국인(9)\n - 재외국인(8)\n - 동포(7)"
+  },
+  {
+    "name": "우편번호C13",
+    "dataType": "CHAR",
+    "length": 13,
+    "scale": null,
+    "storageFormat": "13자리 문자",
+    "displayFormat": "9-9999-99999999",
+    "allowedValues": null
+  },
+  {
+    "name": "우편번호C5",
+    "dataType": "CHAR",
+    "length": 5,
+    "scale": null,
+    "storageFormat": "5자리 문자",
+    "displayFormat": "99999",
+    "allowedValues": null
+  },
+  {
+    "name": "운전면허번호C12",
+    "dataType": "CHAR",
+    "length": 12,
+    "scale": null,
+    "storageFormat": "12자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "일련번호C2",
+    "dataType": "CHAR",
+    "length": 2,
+    "scale": null,
+    "storageFormat": "2자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "일련번호N10",
+    "dataType": "NUMERIC",
+    "length": 10,
+    "scale": null,
+    "storageFormat": 9999999999,
+    "displayFormat": 9999999999,
+    "allowedValues": null
+  },
+  {
+    "name": "일련번호N22",
+    "dataType": "NUMERIC",
+    "length": 22,
+    "scale": null,
+    "storageFormat": "9999999999999999999999",
+    "displayFormat": "9999999999999999999999",
+    "allowedValues": null
+  },
+  {
+    "name": "일련번호V50",
+    "dataType": "VARCHAR",
+    "length": 50,
+    "scale": null,
+    "storageFormat": "50자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "자동차등록번호V16",
+    "dataType": "VARCHAR",
+    "length": 16,
+    "scale": null,
+    "storageFormat": "16자리 이내 문자",
+    "displayFormat": "999가 9999",
+    "allowedValues": null
+  },
+  {
+    "name": "전자납부번호V19",
+    "dataType": "VARCHAR",
+    "length": 19,
+    "scale": null,
+    "storageFormat": "19자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "전화번호V11",
+    "dataType": "VARCHAR",
+    "length": 11,
+    "scale": null,
+    "storageFormat": "11자리 이내 문자",
+    "displayFormat": "(9)99-(9)999-9999\nor\n999-(9)999-9999\nor\n9999-9999\nor\n999-(9)999-9999",
+    "allowedValues": null
+  },
+  {
+    "name": "전화번호V4",
+    "dataType": "VARCHAR",
+    "length": 4,
+    "scale": null,
+    "storageFormat": "4자리 이내 문자",
+    "displayFormat": "9999",
+    "allowedValues": null
+  },
+  {
+    "name": "주민등록번호C13",
+    "dataType": "CHAR",
+    "length": 13,
+    "scale": null,
+    "storageFormat": "13자리 문자",
+    "displayFormat": "999999-9999999",
+    "allowedValues": null
+  },
+  {
+    "name": "차대번호C17",
+    "dataType": "CHAR",
+    "length": 17,
+    "scale": null,
+    "storageFormat": "17자리 문자",
+    "displayFormat": "AAAAA99AAA9999999",
+    "allowedValues": null
+  },
+  {
+    "name": "팩스번호V20",
+    "dataType": "VARCHAR",
+    "length": 20,
+    "scale": null,
+    "storageFormat": "20자리 이내 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "경도N13,10",
+    "dataType": "NUMERIC",
+    "length": 13,
+    "scale": 10,
+    "storageFormat": "999.9999999999",
+    "displayFormat": "999.9999999999",
+    "allowedValues": null
+  },
+  {
+    "name": "단면적N15,4",
+    "dataType": "NUMERIC",
+    "length": 15,
+    "scale": 4,
+    "storageFormat": "99999999999.9999",
+    "displayFormat": "99,999,999,999.9999",
+    "allowedValues": null
+  },
+  {
+    "name": "면적N19,9",
+    "dataType": "NUMERIC",
+    "length": 19,
+    "scale": 9,
+    "storageFormat": "9999999999.999999999",
+    "displayFormat": "9,999,999,999.999999999",
+    "allowedValues": null
+  },
+  {
+    "name": "수N2",
+    "dataType": "NUMERIC",
+    "length": 2,
+    "scale": null,
+    "storageFormat": "99",
+    "displayFormat": "99",
+    "allowedValues": null
+  },
+  {
+    "name": "수N3",
+    "dataType": "NUMERIC",
+    "length": 3,
+    "scale": null,
+    "storageFormat": "999",
+    "displayFormat": "999",
+    "allowedValues": null
+  },
+  {
+    "name": "수N4",
+    "dataType": "NUMERIC",
+    "length": 4,
+    "scale": null,
+    "storageFormat": 9999,
+    "displayFormat": 9999,
+    "allowedValues": null
+  },
+  {
+    "name": "수N4,2",
+    "dataType": "NUMERIC",
+    "length": 4,
+    "scale": 2,
+    "storageFormat": 99.99,
+    "displayFormat": 99.99,
+    "allowedValues": null
+  },
+  {
+    "name": "수N7",
+    "dataType": "NUMERIC",
+    "length": 7,
+    "scale": null,
+    "storageFormat": 9999999,
+    "displayFormat": 9999999,
+    "allowedValues": null
+  },
+  {
+    "name": "수N7,2",
+    "dataType": "NUMERIC",
+    "length": 7,
+    "scale": 2,
+    "storageFormat": "99999.99",
+    "displayFormat": "99999.99",
+    "allowedValues": null
+  },
+  {
+    "name": "수N8,2",
+    "dataType": "NUMERIC",
+    "length": 8,
+    "scale": 2,
+    "storageFormat": "999999.99",
+    "displayFormat": "999999.99",
+    "allowedValues": null
+  },
+  {
+    "name": "수N8,3",
+    "dataType": "NUMERIC",
+    "length": 8,
+    "scale": 3,
+    "storageFormat": "99999.999",
+    "displayFormat": "99999.999",
+    "allowedValues": null
+  },
+  {
+    "name": "수N10",
+    "dataType": "NUMERIC",
+    "length": 10,
+    "scale": null,
+    "storageFormat": "9999999999",
+    "displayFormat": "9,999,999,999",
+    "allowedValues": null
+  },
+  {
+    "name": "수N10,3",
+    "dataType": "NUMERIC",
+    "length": 10,
+    "scale": 3,
+    "storageFormat": 9999999.999,
+    "displayFormat": 9999999.999,
+    "allowedValues": null
+  },
+  {
+    "name": "수N10,5",
+    "dataType": "NUMERIC",
+    "length": 10,
+    "scale": 5,
+    "storageFormat": "99999.99999",
+    "displayFormat": "99999.99999",
+    "allowedValues": null
+  },
+  {
+    "name": "수N14",
+    "dataType": "NUMERIC",
+    "length": 14,
+    "scale": null,
+    "storageFormat": "99999999999999",
+    "displayFormat": "99,999,999,999,999",
+    "allowedValues": null
+  },
+  {
+    "name": "수N15,4",
+    "dataType": "NUMERIC",
+    "length": 15,
+    "scale": 4,
+    "storageFormat": "99999999999.9999",
+    "displayFormat": "99999999999.9999",
+    "allowedValues": null
+  },
+  {
+    "name": "수N20,9",
+    "dataType": "NUMERIC",
+    "length": 20,
+    "scale": 9,
+    "storageFormat": "99999999999.999999999",
+    "displayFormat": "99999999999.999999999",
+    "allowedValues": null
+  },
+  {
+    "name": "수N22,6",
+    "dataType": "NUMERIC",
+    "length": 22,
+    "scale": 6,
+    "storageFormat": "9999999999999999.999999",
+    "displayFormat": "9999999999999999.999999",
+    "allowedValues": null
+  },
+  {
+    "name": "수N22,10",
+    "dataType": "NUMERIC",
+    "length": 22,
+    "scale": 10,
+    "storageFormat": "999999999999.9999999999",
+    "displayFormat": "999999999999.9999999999",
+    "allowedValues": null
+  },
+  {
+    "name": "순서N10",
+    "dataType": "NUMERIC",
+    "length": 10,
+    "scale": null,
+    "storageFormat": "9999999999",
+    "displayFormat": 9999999999,
+    "allowedValues": null
+  },
+  {
+    "name": "위도N12,10",
+    "dataType": "NUMERIC",
+    "length": 12,
+    "scale": 10,
+    "storageFormat": "99.9999999999",
+    "displayFormat": "99.9999999999",
+    "allowedValues": null
+  },
+  {
+    "name": "좌표N13,10",
+    "dataType": "NUMERIC",
+    "length": 13,
+    "scale": 10,
+    "storageFormat": "999.9999999999",
+    "displayFormat": "999.9999999999",
+    "allowedValues": null
+  },
+  {
+    "name": "비율N12,9",
+    "dataType": "NUMERIC",
+    "length": 12,
+    "scale": 9,
+    "storageFormat": "999.999999999",
+    "displayFormat": "999.999999999",
+    "allowedValues": null
+  },
+  {
+    "name": "비율N13,9",
+    "dataType": "NUMERIC",
+    "length": 13,
+    "scale": 9,
+    "storageFormat": "9999.999999999",
+    "displayFormat": "9999.999999999",
+    "allowedValues": null
+  },
+  {
+    "name": "율N5,2",
+    "dataType": "NUMERIC",
+    "length": 5,
+    "scale": 2,
+    "storageFormat": 999.99,
+    "displayFormat": 999.99,
+    "allowedValues": null
+  },
+  {
+    "name": "율N6,2",
+    "dataType": "NUMERIC",
+    "length": 6,
+    "scale": 2,
+    "storageFormat": 9999.99,
+    "displayFormat": 9999.99,
+    "allowedValues": null
+  },
+  {
+    "name": "율N7,2",
+    "dataType": "NUMERIC",
+    "length": 7,
+    "scale": 2,
+    "storageFormat": "99999.99",
+    "displayFormat": "99999.99",
+    "allowedValues": null
+  },
+  {
+    "name": "율N12,6",
+    "dataType": "NUMERIC",
+    "length": 12,
+    "scale": 6,
+    "storageFormat": "999999.999999",
+    "displayFormat": "999999.999999",
+    "allowedValues": null
+  },
+  {
+    "name": "여부C1",
+    "dataType": "CHAR",
+    "length": 1,
+    "scale": null,
+    "storageFormat": "1자리 문자",
+    "displayFormat": "Y or N",
+    "allowedValues": "Y : 여(예),\nN : 부(아니요)"
+  },
+  {
+    "name": "유무C1",
+    "dataType": "CHAR",
+    "length": 1,
+    "scale": null,
+    "storageFormat": "1자리 문자",
+    "displayFormat": "Y or N",
+    "allowedValues": "Y : 유(있음), \nN : 무(없음)"
+  },
+  {
+    "name": "코드C1",
+    "dataType": "CHAR",
+    "length": 1,
+    "scale": null,
+    "storageFormat": "1자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "코드C2",
+    "dataType": "CHAR",
+    "length": 2,
+    "scale": null,
+    "storageFormat": "2자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "코드C3",
+    "dataType": "CHAR",
+    "length": 3,
+    "scale": null,
+    "storageFormat": "3자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "코드C4",
+    "dataType": "CHAR",
+    "length": 4,
+    "scale": null,
+    "storageFormat": "4자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "코드C5",
+    "dataType": "CHAR",
+    "length": 5,
+    "scale": null,
+    "storageFormat": "5자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "코드C7",
+    "dataType": "CHAR",
+    "length": 7,
+    "scale": null,
+    "storageFormat": "7자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "코드C8",
+    "dataType": "CHAR",
+    "length": 8,
+    "scale": null,
+    "storageFormat": "8자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "코드C10",
+    "dataType": "CHAR",
+    "length": 10,
+    "scale": null,
+    "storageFormat": "10자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "코드C12",
+    "dataType": "CHAR",
+    "length": 12,
+    "scale": null,
+    "storageFormat": "12자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호C9",
+    "dataType": "VARCHAR",
+    "length": 9,
+    "scale": null,
+    "storageFormat": "9자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호C13",
+    "dataType": "VARCHAR",
+    "length": 13,
+    "scale": null,
+    "storageFormat": "13자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  },
+  {
+    "name": "번호C24",
+    "dataType": "VARCHAR",
+    "length": 24,
+    "scale": null,
+    "storageFormat": "24자리 문자",
+    "displayFormat": null,
+    "allowedValues": null
+  }
+]
