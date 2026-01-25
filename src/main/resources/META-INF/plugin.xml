@@ -6,10 +6,22 @@
 
     <depends>com.intellij.modules.platform</depends>
 
-    <resource-bundle>messages.MyBundle</resource-bundle>
+    <resource-bundle>messages.StdNamingHoundBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.ydj515.stdnaminghound.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-        <postStartupActivity implementation="com.github.ydj515.stdnaminghound.startup.MyProjectActivity" />
+        <notificationGroup
+                id="StdNamingHound"
+                displayType="BALLOON"
+                isLogByDefault="false"
+                title="Std Naming Hound"/>
+        <toolWindow
+                factoryClass="com.github.ydj515.stdnaminghound.toolWindow.StdNamingHoundToolWindowFactory"
+                id="StdNamingHound"
+                icon="/icons/stdNamingHound.svg"/>
+        <postStartupActivity implementation="com.github.ydj515.stdnaminghound.startup.StdNamingHoundProjectActivity" />
+        <applicationConfigurable
+                displayName="Std Naming Hound"
+                id="stdNamingHound.settings"
+                instance="com.github.ydj515.stdnaminghound.settings.StdNamingHoundConfigurable"/>
     </extensions>
 </idea-plugin>
