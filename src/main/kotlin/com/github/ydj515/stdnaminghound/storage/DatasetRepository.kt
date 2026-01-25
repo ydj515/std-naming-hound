@@ -2,6 +2,7 @@ package com.github.ydj515.stdnaminghound.storage
 
 import com.github.ydj515.stdnaminghound.model.Dataset
 import com.github.ydj515.stdnaminghound.settings.StdNamingHoundSettings
+import com.github.ydj515.stdnaminghound.storage.MergePolicy
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.components.Service
@@ -37,7 +38,8 @@ class DatasetRepository {
         return if (settings.state.useCustomOnly) {
             custom
         } else {
-            merger.merge(base, custom)
+            val policy = MergePolicy.fromName(settings.state.mergePolicy)
+            merger.merge(base, custom, policy)
         }
     }
 }
