@@ -93,6 +93,8 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
         private val settings = service<StdNamingHoundSettings>()
         private val sqlGenerator = SqlGenerator()
         private val project = toolWindow.project
+        private var currentCaseStyle: WordBuilder.CaseStyle =
+            WordBuilder.CaseStyle.SNAKE_UPPER
 
         fun getContent() = JBPanel<JBPanel<*>>().apply {
             layout = BorderLayout()
@@ -122,12 +124,6 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             }
             val tokensPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0))
             val domainCombo = JComboBox<String>()
-            val caseCombo = JComboBox(WordBuilder.CaseStyle.entries.toTypedArray())
-                .apply {
-                    selectedItem = runCatching {
-                        WordBuilder.CaseStyle.valueOf(settings.state.defaultCaseStyle)
-                    }.getOrDefault(WordBuilder.CaseStyle.SNAKE_UPPER)
-                }
             domainCombo.preferredSize = JBUI.size(JBUI.scale(165), domainCombo.preferredSize.height)
             domainCombo.maximumSize = JBUI.size(JBUI.scale(165), domainCombo.preferredSize.height)
             val previewHeight = JBUI.scale(24)
@@ -249,10 +245,13 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 add(tokensRow, BorderLayout.NORTH)
                 add(builderControls, BorderLayout.CENTER)
             }
+            val clearColumnsButton = JButton(AllIcons.Actions.GC).apply {
+                toolTipText = "Clear Stage"
+            }
             val columnsPanel = JPanel(BorderLayout()).apply {
-                val label = JBLabel("Stage")
                 val header = JPanel(BorderLayout()).apply {
-                    add(label, BorderLayout.WEST)
+                    add(JBLabel("Stage"), BorderLayout.WEST)
+                    add(clearColumnsButton, BorderLayout.EAST)
                 }
                 val scroll = JBScrollPane(columnsList).apply {
                     preferredSize = Dimension(600, 140)
@@ -274,9 +273,6 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 add(header, BorderLayout.NORTH)
                 add(outputArea, BorderLayout.CENTER)
             }
-            val clearColumnsButton = JButton(AllIcons.Actions.GC).apply {
-                toolTipText = "Clear Stage"
-            }
             val topPanel = JPanel(BorderLayout()).apply {
                 add(topBar, BorderLayout.NORTH)
                 add(center, BorderLayout.CENTER)
@@ -296,17 +292,6 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
 
             add(mainSplit, BorderLayout.CENTER)
 
-
-            val columnsHeader = JPanel(BorderLayout()).apply {
-                add(JBLabel("Stage"), BorderLayout.WEST)
-                add(clearColumnsButton, BorderLayout.EAST)
-            }
-            columnsPanel.removeAll()
-            columnsPanel.add(columnsHeader, BorderLayout.NORTH)
-            columnsPanel.add(JBScrollPane(columnsList).apply {
-                preferredSize = Dimension(600, 140)
-            }, BorderLayout.CENTER)
-
             val gap = JBUI.scale(6)
             topPanel.border = JBUI.Borders.empty(0, 0, gap, 0)
             stagingPanel.border = JBUI.Borders.empty(gap, 0, gap, 0)
@@ -322,11 +307,11 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 val target = name?.trim().orEmpty()
                 if (target.isBlank()) return
                 val model = domainCombo.model
-                for (i in 0 until model.size) {
-                    if (model.getElementAt(i) == target) {
-                        domainCombo.selectedItem = target
-                        return
-                    }
+                val found = (0 until model.size).asSequence()
+                    .map { model.getElementAt(it) }
+                    .any { it == target }
+                if (found) {
+                    domainCombo.selectedItem = target
                 }
             }
 
@@ -518,35 +503,29 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
 
             fun buildColumnOutputFromColumns(): String {
                 if (columnsModel.size == 0) return ""
-                val lines = mutableListOf<String>()
-                for (i in 0 until columnsModel.size) {
-                    val entry = columnsModel.getElementAt(i)
-                    lines.add(entry.definition)
-                    if (!entry.commentSql.isNullOrBlank()) {
-                        lines.add(entry.commentSql)
+                return (0 until columnsModel.size)
+                    .asSequence()
+                    .map { columnsModel.getElementAt(it) }
+                    .flatMap { entry ->
+                        sequenceOf(entry.definition, entry.commentSql)
+                            .filterNot { it.isNullOrBlank() }
+                            .map { it!!.trim() }
                     }
-                }
-                return lines.joinToString("\n")
+                    .joinToString("\n")
             }
 
             fun buildCreateTableFromColumns(): String {
                 if (columnsModel.size == 0) return ""
                 val dialect = DbDialect.fromName(settings.state.dbDialect)
-                val definitions = mutableListOf<String>()
-                for (i in 0 until columnsModel.size) {
-                    definitions.add(columnsModel.getElementAt(i).definition)
-                }
+                val definitions = (0 until columnsModel.size)
+                    .map { columnsModel.getElementAt(it).definition }
                 val create = "CREATE TABLE TABLE_NAME (\n  ${definitions.joinToString(",\n  ")}\n);"
                 if (dialect == DbDialect.MYSQL) {
                     return create
                 }
-                val comments = mutableListOf<String>()
-                for (i in 0 until columnsModel.size) {
-                    val comment = columnsModel.getElementAt(i).commentSql
-                    if (!comment.isNullOrBlank()) {
-                        comments.add(comment)
-                    }
-                }
+                val comments = (0 until columnsModel.size)
+                    .map { columnsModel.getElementAt(it).commentSql }
+                    .filterNot { it.isNullOrBlank() }
                 return if (comments.isEmpty()) create else "$create\n${comments.joinToString("\n")}"
             }
 
@@ -827,7 +806,10 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             })
 
             refreshMeta()
-            builder.setCaseStyle(caseCombo.selectedItem as WordBuilder.CaseStyle)
+            currentCaseStyle = runCatching {
+                WordBuilder.CaseStyle.valueOf(settings.state.defaultCaseStyle)
+            }.getOrDefault(WordBuilder.CaseStyle.SNAKE_UPPER)
+            builder.setCaseStyle(currentCaseStyle)
             updateBuilderPreview()
             updateActionButtons()
             updateOutputPreview()
@@ -838,8 +820,8 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                     val style = runCatching {
                         WordBuilder.CaseStyle.valueOf(state.defaultCaseStyle)
                     }.getOrDefault(WordBuilder.CaseStyle.SNAKE_UPPER)
-                    caseCombo.selectedItem = style
-                    builder.setCaseStyle(style)
+                    currentCaseStyle = style
+                    builder.setCaseStyle(currentCaseStyle)
                     updateBuilderPreview()
                     updateOutputLabel()
                     rebuildColumnEntriesForDialect()
@@ -945,10 +927,7 @@ private fun splitColumnSql(sql: String): ColumnParts {
 }
 
 private fun DefaultListModel<ColumnEntry>.containsName(name: String): Boolean {
-    for (i in 0 until size) {
-        if (getElementAt(i).name == name) return true
-    }
-    return false
+    return this.elements().asSequence().any { it.name == name }
 }
 
 private class ColumnEntryTransferable(
