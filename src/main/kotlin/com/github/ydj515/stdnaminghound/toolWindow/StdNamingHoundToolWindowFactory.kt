@@ -34,6 +34,7 @@ import com.intellij.util.Alarm
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.labels.LinkLabel
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.awt.Toolkit
@@ -90,12 +91,12 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             val tokensPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0))
             val caseCombo = JComboBox(WordBuilder.CaseStyle.entries.toTypedArray())
                 .apply {
-                    preferredSize = java.awt.Dimension(170, preferredSize.height)
-                    maximumSize = java.awt.Dimension(170, preferredSize.height)
+                    preferredSize = JBUI.size(JBUI.scale(170), preferredSize.height)
+                    maximumSize = JBUI.size(JBUI.scale(170), preferredSize.height)
                 }
             val previewHeight = caseCombo.preferredSize.height
-            builderPreview.preferredSize = java.awt.Dimension(220, previewHeight)
-            builderPreview.minimumSize = java.awt.Dimension(120, previewHeight)
+            builderPreview.preferredSize = JBUI.size(JBUI.scale(220), previewHeight)
+            builderPreview.minimumSize = JBUI.size(JBUI.scale(120), previewHeight)
             builderPreview.maximumSize = java.awt.Dimension(Int.MAX_VALUE, previewHeight)
             val builderInsertButton = JButton(AllIcons.Actions.Edit).apply {
                 toolTipText = "Insert Builder"
@@ -117,18 +118,18 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             }
             val center = JBScrollPane(resultList)
             val detail = JBScrollPane(detailArea)
-            val leftInset = 12
-            val iconColumnWidth = 20
-            val iconContentGap = 8
-            tokensPanel.border = javax.swing.BorderFactory.createEmptyBorder(0, 0, 0, 0)
+            val leftInset = JBUI.scale(12)
+            val iconColumnWidth = JBUI.scale(20)
+            val iconContentGap = JBUI.scale(8)
+            tokensPanel.border = JBUI.Borders.empty()
             val builderControls = JPanel(BorderLayout()).apply {
                 val row1 = JPanel(BorderLayout()).apply {
                     val iconPanel = JPanel(BorderLayout()).apply {
                         add(JBLabel(AllIcons.General.GearPlain), BorderLayout.CENTER)
                     }.apply {
-                        preferredSize = java.awt.Dimension(iconColumnWidth, preferredSize.height)
-                        minimumSize = java.awt.Dimension(iconColumnWidth, minimumSize.height)
-                        maximumSize = java.awt.Dimension(iconColumnWidth, maximumSize.height)
+                        preferredSize = JBUI.size(iconColumnWidth, preferredSize.height)
+                        minimumSize = JBUI.size(iconColumnWidth, minimumSize.height)
+                        maximumSize = JBUI.size(iconColumnWidth, maximumSize.height)
                     }
                     val comboPanel = JPanel(BorderLayout()).apply {
                         add(caseCombo, BorderLayout.CENTER)
@@ -138,10 +139,10 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                         maximumSize = caseCombo.maximumSize
                     }
                     val contentPanel = JPanel(BorderLayout()).apply {
-                        border = javax.swing.BorderFactory.createEmptyBorder(0, iconContentGap, 0, 0)
+                        border = JBUI.Borders.empty(0, iconContentGap, 0, 0)
                         add(comboPanel, BorderLayout.WEST)
                     }
-                    border = javax.swing.BorderFactory.createEmptyBorder(0, leftInset, 0, 0)
+                    border = JBUI.Borders.empty(0, leftInset, 0, 0)
                     add(iconPanel, BorderLayout.WEST)
                     add(contentPanel, BorderLayout.CENTER)
                 }
@@ -149,15 +150,15 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                     val iconPanel = JPanel(BorderLayout()).apply {
                         add(JBLabel(AllIcons.Actions.Preview), BorderLayout.CENTER)
                     }.apply {
-                        preferredSize = java.awt.Dimension(iconColumnWidth, preferredSize.height)
-                        minimumSize = java.awt.Dimension(iconColumnWidth, minimumSize.height)
-                        maximumSize = java.awt.Dimension(iconColumnWidth, maximumSize.height)
+                        preferredSize = JBUI.size(iconColumnWidth, preferredSize.height)
+                        minimumSize = JBUI.size(iconColumnWidth, minimumSize.height)
+                        maximumSize = JBUI.size(iconColumnWidth, maximumSize.height)
                     }
                     val contentPanel = JPanel(BorderLayout()).apply {
-                        border = javax.swing.BorderFactory.createEmptyBorder(0, iconContentGap, 0, 0)
+                        border = JBUI.Borders.empty(0, iconContentGap, 0, 0)
                         add(builderPreview, BorderLayout.CENTER)
                     }
-                    border = javax.swing.BorderFactory.createEmptyBorder(0, leftInset, 0, 0)
+                    border = JBUI.Borders.empty(0, leftInset, 0, 0)
                     add(iconPanel, BorderLayout.WEST)
                     add(contentPanel, BorderLayout.CENTER)
                 }
@@ -165,12 +166,12 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                     val spacer = Box.createHorizontalStrut(iconColumnWidth)
                     val contentPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
                         add(builderInsertButton)
-                        add(Box.createHorizontalStrut(8))
+                        add(Box.createHorizontalStrut(JBUI.scale(8)))
                         add(builderClearButton)
                     }
-                    border = javax.swing.BorderFactory.createEmptyBorder(0, leftInset, 0, 0)
+                    border = JBUI.Borders.empty(0, leftInset, 0, 0)
                     val contentWithGap = JPanel(BorderLayout()).apply {
-                        border = javax.swing.BorderFactory.createEmptyBorder(0, iconContentGap, 0, 0)
+                        border = JBUI.Borders.empty(0, iconContentGap, 0, 0)
                         add(contentPanel, BorderLayout.CENTER)
                     }
                     add(spacer, BorderLayout.WEST)
@@ -186,14 +187,14 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                         val iconLabel = JBLabel(AllIcons.General.FitContent)
                         add(iconLabel, BorderLayout.CENTER)
                     }
-                    iconPanel.preferredSize = java.awt.Dimension(iconColumnWidth, iconPanel.preferredSize.height)
-                    iconPanel.minimumSize = java.awt.Dimension(iconColumnWidth, iconPanel.minimumSize.height)
-                    iconPanel.maximumSize = java.awt.Dimension(iconColumnWidth, iconPanel.maximumSize.height)
+                    iconPanel.preferredSize = JBUI.size(iconColumnWidth, iconPanel.preferredSize.height)
+                    iconPanel.minimumSize = JBUI.size(iconColumnWidth, iconPanel.minimumSize.height)
+                    iconPanel.maximumSize = JBUI.size(iconColumnWidth, iconPanel.maximumSize.height)
                     val contentPanel = JPanel(BorderLayout()).apply {
-                        border = javax.swing.BorderFactory.createEmptyBorder(0, iconContentGap, 0, 0)
+                        border = JBUI.Borders.empty(0, iconContentGap, 0, 0)
                         add(tokensPanel, BorderLayout.CENTER)
                     }
-                    border = javax.swing.BorderFactory.createEmptyBorder(0, leftInset, 0, 0)
+                    border = JBUI.Borders.empty(0, leftInset, 0, 0)
                     add(iconPanel, BorderLayout.WEST)
                     add(contentPanel, BorderLayout.CENTER)
                 }
@@ -208,7 +209,7 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
             val splitPane = JSplitPane(JSplitPane.VERTICAL_SPLIT, center, bottomPanel).apply {
                 resizeWeight = 0.7
                 isContinuousLayout = true
-                dividerSize = 6
+                dividerSize = JBUI.scale(6)
                 setDividerLocation(0.65)
             }
 

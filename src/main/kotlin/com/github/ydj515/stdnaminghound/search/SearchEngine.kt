@@ -32,10 +32,10 @@ class SearchEngine(
             val target = if (isKoreanQuery) entry.searchTextKo else entry.searchTextEn
             if (target.isBlank()) continue
             var score = scoreMatch(normalizedQuery, target)
-            if (useFuzzy && score < 0.3) {
+            if (useFuzzy && score < FUZZY_SCORE_THRESHOLD) {
                 val fuzzy = fuzzyScore(normalizedQuery, target)
                 if (fuzzy > score) {
-                    score = fuzzy * 0.8
+                    score = fuzzy * FUZZY_SCORE_WEIGHT
                 }
             }
             if (score > 0.0) {
@@ -103,4 +103,9 @@ class SearchEngine(
         val item: SearchItem,
         val score: Double,
     )
+
+    companion object {
+        private const val FUZZY_SCORE_THRESHOLD = 0.3
+        private const val FUZZY_SCORE_WEIGHT = 0.8
+    }
 }
