@@ -1,0 +1,10 @@
+{
+  "dataset_version": "2025.11",
+  "source": "origin/공공데이터 공통표준(2025.11월).xlsx",
+  "generated_at": "2026-01-24T08:18:56.311511+00:00",
+  "counts": {
+    "terms": 13176,
+    "words": 3284,
+    "domains": 129
+  }
+}
