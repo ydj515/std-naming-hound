@@ -28,6 +28,7 @@ Std Naming Hound는 표준 용어/단어/도메인 사전을 빠르게 검색하
 
 표준 용어/단어 사전을 빠르게 검색하고, 컬럼명을 조합해 SQL을 생성하는 IntelliJ 기반 플러그인입니다.
 
+[![Video Label](http://img.youtube.com/vi/1grdztjbHMs/0.jpg)](https://youtu.be/1grdztjbHMs)
 
 ## 주요 기능
 - 용어/단어/도메인 사전 검색 및 정렬
