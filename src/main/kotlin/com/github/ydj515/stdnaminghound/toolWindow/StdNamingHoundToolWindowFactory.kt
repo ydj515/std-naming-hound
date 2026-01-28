@@ -757,8 +757,8 @@ class StdNamingHoundToolWindowFactory : ToolWindowFactory {
                 if (columnsModel.size == 0) return@addActionListener
                 val result = Messages.showYesNoDialog(
                     project,
-                    "모든 컬럼을 삭제하시겠습니까?",
-                    "컬럼 삭제",
+                    "Are you sure you want to delete all columns?",
+                    "Delete All Columns",
                     null
                 )
                 if (result == Messages.YES) {
