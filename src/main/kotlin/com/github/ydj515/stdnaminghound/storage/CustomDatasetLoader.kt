@@ -6,10 +6,12 @@ import com.github.ydj515.stdnaminghound.model.DatasetMeta
 import com.google.gson.JsonParser
 import com.intellij.openapi.diagnostic.Logger
 
+/** 사용자 JSON을 Dataset으로 변환해 로드한다. */
 class CustomDatasetLoader {
     private val logger = Logger.getInstance(CustomDatasetLoader::class.java)
     private val parser = DatasetJsonParser()
 
+    /** JSON 문자열을 파싱해 Dataset으로 변환한다. */
     fun load(json: String): Dataset? {
         return try {
             val obj = JsonParser.parseString(json).asJsonObject

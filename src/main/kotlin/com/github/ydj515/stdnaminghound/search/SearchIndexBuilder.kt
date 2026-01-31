@@ -10,7 +10,9 @@ import com.github.ydj515.stdnaminghound.model.TermRef
 import com.github.ydj515.stdnaminghound.model.Word
 import com.github.ydj515.stdnaminghound.model.WordRef
 
+/** Dataset을 검색 인덱스로 변환한다. */
 class SearchIndexBuilder {
+    /** Dataset의 모든 항목을 SearchIndex로 변환한다. */
     fun build(dataset: Dataset): SearchIndex {
         val entries = mutableListOf<SearchEntry>()
         val items = mutableListOf<SearchItem>()
@@ -54,6 +56,7 @@ class SearchIndexBuilder {
         return SearchIndex(items = items, entries = entries)
     }
 
+    /** Term을 검색용 아이템으로 변환한다. */
     private fun Term.toSearchItem(index: Int): SearchItem {
         val subText = listOfNotNull(
             domainName?.takeIf { it.isNotBlank() }?.let { "Domain: $it" },
@@ -70,6 +73,7 @@ class SearchIndexBuilder {
         )
     }
 
+    /** Word를 검색용 아이템으로 변환한다. */
     private fun Word.toSearchItem(index: Int): SearchItem {
         return SearchItem(
             type = SearchItemType.WORD,
@@ -82,6 +86,7 @@ class SearchIndexBuilder {
         )
     }
 
+    /** Domain을 검색용 아이템으로 변환한다. */
     private fun Domain.toSearchItem(index: Int): SearchItem {
         val size = buildString {
             val len = length?.toString()
@@ -110,6 +115,7 @@ class SearchIndexBuilder {
         )
     }
 
+    /** Term의 한글 검색 텍스트를 구성한다. */
     private fun Term.toKoSearchText(): String {
         return buildString {
             append(koName)
@@ -119,10 +125,12 @@ class SearchIndexBuilder {
         }
     }
 
+    /** Term의 영문/약어 검색 텍스트를 구성한다. */
     private fun Term.toEnSearchText(): String {
         return listOfNotNull(abbr?.takeIf { it.isNotBlank() }).joinToString(" ")
     }
 
+    /** Word의 한글 검색 텍스트를 구성한다. */
     private fun Word.toKoSearchText(): String {
         return buildString {
             append(koName)
@@ -131,6 +139,7 @@ class SearchIndexBuilder {
         }
     }
 
+    /** Word의 영문/약어 검색 텍스트를 구성한다. */
     private fun Word.toEnSearchText(): String {
         return listOfNotNull(
             enName?.takeIf { it.isNotBlank() },
@@ -138,8 +147,10 @@ class SearchIndexBuilder {
         ).joinToString(" ")
     }
 
+    /** Domain의 한글 검색 텍스트를 구성한다. */
     private fun Domain.toKoSearchText(): String = name
 
+    /** Domain의 영문 검색 텍스트를 구성한다. */
     private fun Domain.toEnSearchText(): String {
         return listOfNotNull(
             dataType?.takeIf { it.isNotBlank() },

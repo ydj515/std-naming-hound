@@ -10,12 +10,14 @@ import javax.swing.JList
 import javax.swing.ListCellRenderer
 import javax.swing.BorderFactory
 
+/** 검색 결과 리스트의 렌더링을 담당한다. */
 class SearchItemRenderer : ListCellRenderer<SearchItem> {
     private val panel = JBPanel<JBPanel<*>>(BorderLayout())
     private val title = SimpleColoredComponent()
     private val sub = SimpleColoredComponent()
     var hoverIndex: Int = -1
 
+    /** 리스트 셀 UI를 구성해 반환한다. */
     override fun getListCellRendererComponent(
         list: JList<out SearchItem>,
         value: SearchItem,
@@ -70,6 +72,7 @@ class SearchItemRenderer : ListCellRenderer<SearchItem> {
         return panel
     }
 
+    /** 지정 길이를 넘는 텍스트를 말줄임 처리한다. */
     private fun ellipsize(text: String, max: Int): String {
         val trimmed = text.trim()
         if (max <= 0) return ""

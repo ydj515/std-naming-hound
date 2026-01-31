@@ -24,6 +24,7 @@ import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
 
+/** 설정 UI를 구성하고 변경 사항을 적용한다. */
 class StdNamingHoundConfigurable : Configurable {
     private val settings: StdNamingHoundSettings = ApplicationManager.getApplication().service()
     private val datasetRepository: DatasetRepository = ApplicationManager.getApplication().service()
@@ -51,6 +52,7 @@ class StdNamingHoundConfigurable : Configurable {
     private val downloadSampleButton = javax.swing.JButton("Download Sample")
     private val resetButton = javax.swing.JButton("Reset to Default")
 
+    /** 설정 UI 컴포넌트를 생성한다. */
     override fun createComponent(): JComponent {
         if (root == null) {
             root = JPanel(BorderLayout())
@@ -135,6 +137,7 @@ class StdNamingHoundConfigurable : Configurable {
         return root!!
     }
 
+    /** UI 값이 저장된 설정과 다른지 판단한다. */
     override fun isModified(): Boolean {
         val state = settings.state
         if (useCustomOnlyCheck.isSelected != state.useCustomOnly) return true
@@ -149,6 +152,7 @@ class StdNamingHoundConfigurable : Configurable {
         return currentJson != savedJson
     }
 
+    /** UI 값을 검증한 뒤 설정에 반영한다. */
     override fun apply() {
         val json = customJsonArea.text
         val result = validator.validate(json)
@@ -158,6 +162,7 @@ class StdNamingHoundConfigurable : Configurable {
         applySettings()
     }
 
+    /** UI 값을 설정에 저장하고 리포지토리를 갱신한다. */
     private fun applySettings() {
         val state = settings.state
         state.useCustomOnly = useCustomOnlyCheck.isSelected
@@ -174,6 +179,7 @@ class StdNamingHoundConfigurable : Configurable {
             .settingsChanged(state)
     }
 
+    /** 저장된 설정을 UI에 다시 반영한다. */
     override fun reset() {
         val state = settings.state
         useCustomOnlyCheck.isSelected = state.useCustomOnly
@@ -186,12 +192,15 @@ class StdNamingHoundConfigurable : Configurable {
         customJsonArea.text = state.customDatasetJson.orEmpty()
     }
 
+    /** 설정 화면에 표시될 이름을 반환한다. */
     override fun getDisplayName(): String = "Std Naming Hound"
 
+    /** UI 리소스를 해제한다. */
     override fun disposeUIResources() {
         root = null
     }
 
+    /** 샘플 JSON 내용을 반환한다. */
     private fun sampleJson(): String {
         return """
             {

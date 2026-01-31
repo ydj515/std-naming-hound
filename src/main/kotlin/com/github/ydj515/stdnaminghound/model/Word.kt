@@ -1,5 +1,6 @@
 package com.github.ydj515.stdnaminghound.model
 
+/** 단어(Word) 정보를 표현한다. */
 data class Word(
     val koName: String,
     val enName: String?,

@@ -5,7 +5,9 @@ import com.github.ydj515.stdnaminghound.model.Domain
 import com.github.ydj515.stdnaminghound.model.Term
 import com.github.ydj515.stdnaminghound.model.Word
 
+/** 기본/커스텀 데이터셋을 병합 정책에 따라 합친다. */
 class DatasetMerger {
+    /** 병합 정책에 따라 새 Dataset을 생성한다. */
     fun merge(base: Dataset, custom: Dataset, policy: MergePolicy): Dataset {
         return Dataset(
             meta = base.meta,
@@ -15,6 +17,7 @@ class DatasetMerger {
         )
     }
 
+    /** Term 목록을 병합한다. */
     private fun mergeTerms(base: List<Term>, custom: List<Term>, policy: MergePolicy): List<Term> {
         return when (policy) {
             MergePolicy.CUSTOM_FIRST -> mergeWithOrder(base, custom) { item, index, source ->
@@ -29,6 +32,7 @@ class DatasetMerger {
         }
     }
 
+    /** Word 목록을 병합한다. */
     private fun mergeWords(base: List<Word>, custom: List<Word>, policy: MergePolicy): List<Word> {
         return when (policy) {
             MergePolicy.CUSTOM_FIRST -> mergeWithOrder(base, custom) { item, index, source ->
@@ -43,6 +47,7 @@ class DatasetMerger {
         }
     }
 
+    /** Domain 목록을 병합한다. */
     private fun mergeDomains(base: List<Domain>, custom: List<Domain>, policy: MergePolicy): List<Domain> {
         return when (policy) {
             MergePolicy.CUSTOM_FIRST -> mergeWithOrder(base, custom) { item, index, source ->
@@ -57,6 +62,7 @@ class DatasetMerger {
         }
     }
 
+    /** Term의 중복 판정 키를 생성한다. */
     private fun termKey(term: Term, index: Int, source: String): String {
         val koName = term.koName.trim()
         val abbr = term.abbr?.trim().orEmpty()
@@ -67,6 +73,7 @@ class DatasetMerger {
         }
     }
 
+    /** Word의 중복 판정 키를 생성한다. */
     private fun wordKey(word: Word, index: Int, source: String): String {
         val koName = word.koName.trim()
         val abbr = word.abbr?.trim().orEmpty()
@@ -77,11 +84,13 @@ class DatasetMerger {
         }
     }
 
+    /** Domain의 중복 판정 키를 생성한다. */
     private fun domainKey(domain: Domain, index: Int, source: String): String {
         val name = domain.name.trim()
         return if (name.isNotBlank()) name else "$source:domain:$index"
     }
 
+    /** 우선순위 목록을 먼저 넣고, 나머지를 덮어쓰는 방식으로 병합한다. */
     private fun <T> mergeWithOrder(
         first: List<T>,
         second: List<T>,
@@ -93,6 +102,7 @@ class DatasetMerger {
         return merged.values.toList()
     }
 
+    /** 기본 목록을 기준으로 커스텀 중복을 제거한다. */
     private fun <T> mergeWithDedupeBase(
         base: List<T>,
         custom: List<T>,

@@ -2,12 +2,15 @@ package com.github.ydj515.stdnaminghound.sql
 
 import com.github.ydj515.stdnaminghound.model.Domain
 
+/** 도메인과 설명을 기반으로 SQL 문자열을 생성한다. */
 class SqlGenerator {
+    /** SQL 결과와 경고 메시지를 함께 전달한다. */
     data class SqlResult(
         val sql: String,
         val warning: String? = null,
     )
 
+    /** 컬럼 정의 혹은 CREATE TABLE 형식의 SQL을 생성한다. */
     fun generateColumnSql(
         columnName: String,
         domain: Domain?,
@@ -37,6 +40,7 @@ class SqlGenerator {
         }
     }
 
+    /** 단일 컬럼 정의 SQL을 생성한다. */
     private fun buildColumnOnlySql(
         definition: String,
         comment: String,
@@ -54,6 +58,7 @@ class SqlGenerator {
         return "$definition;\n$commentSql"
     }
 
+    /** CREATE TABLE SQL을 생성한다. */
     private fun buildCreateTableSql(
         definition: String,
         comment: String,
@@ -69,6 +74,7 @@ class SqlGenerator {
         return "$create\n$commentSql"
     }
 
+    /** 컬럼 정의 문자열을 생성한다. */
     private fun buildColumnDefinition(
         columnName: String,
         type: String,
@@ -82,6 +88,7 @@ class SqlGenerator {
         }
     }
 
+    /** 도메인 정보를 방언에 맞는 타입 문자열로 변환한다. */
     private fun toColumnType(domain: Domain, dialect: DbDialect): String {
         val dataType = domain.dataType?.uppercase()?.trim().orEmpty()
         val length = domain.length
@@ -108,5 +115,6 @@ class SqlGenerator {
         }
     }
 
+    /** SQL 문자열에서 따옴표를 이스케이프한다. */
     private fun escapeSql(text: String): String = text.replace("'", "''")
 }

@@ -7,6 +7,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.components.Service
 
+/** 기본/커스텀 데이터셋을 로드하고 병합하는 저장소다. */
 @Service(Service.Level.APP)
 class DatasetRepository {
     private val loader = ResourceDatasetLoader()
@@ -18,14 +19,17 @@ class DatasetRepository {
     @Volatile
     private var cached: Dataset = loadMerged()
 
+    /** 현재 캐시된 데이터셋을 반환한다. */
     fun getDataset(): Dataset = cached
 
+    /** 설정을 반영해 데이터셋을 다시 로드한다. */
     fun reload(): Dataset {
         val next = loadMerged()
         cached = next
         return next
     }
 
+    /** 기본/커스텀 데이터를 읽어 병합한 최종 결과를 만든다. */
     private fun loadMerged(): Dataset {
         val base = loader.load()
         val customJson = settings.state.customDatasetJson

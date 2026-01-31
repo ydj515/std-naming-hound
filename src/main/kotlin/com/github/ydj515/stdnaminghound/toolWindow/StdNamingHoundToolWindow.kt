@@ -15,6 +15,7 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ui.components.JBPanel
 import com.intellij.util.Alarm
 
+/** ToolWindow의 초기 구성과 의존성 연결을 담당한다. */
 class StdNamingHoundToolWindow(private val toolWindow: ToolWindow) {
     private val datasetRepository = service<DatasetRepository>()
     private val searchIndexRepository = service<SearchIndexRepository>()
@@ -25,6 +26,7 @@ class StdNamingHoundToolWindow(private val toolWindow: ToolWindow) {
     private val settings = service<StdNamingHoundSettings>()
     private val sqlGenerator = SqlGenerator()
 
+    /** ToolWindow 루트 UI를 생성해 반환한다. */
     fun getContent(): JBPanel<JBPanel<*>> {
         val ui = ToolWindowUiBuilder().build(toolWindow.project)
         val context = ToolWindowContext(
