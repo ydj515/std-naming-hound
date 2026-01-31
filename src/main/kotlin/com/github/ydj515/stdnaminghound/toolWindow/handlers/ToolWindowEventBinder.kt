@@ -12,12 +12,15 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.ui.Messages
+import com.intellij.ui.components.labels.LinkLabel
+import com.intellij.ui.components.labels.LinkListener
 import java.awt.Toolkit
 import java.awt.event.KeyEvent
 import javax.swing.JMenuItem
 import javax.swing.JPopupMenu
 import javax.swing.JComponent
 
+/** UI 이벤트를 로직으로 연결한다. */
 class ToolWindowEventBinder(
     private val logic: ToolWindowLogic,
     private val context: ToolWindowContext,
@@ -25,6 +28,7 @@ class ToolWindowEventBinder(
     private val ui = context.ui
     private var addBuilderMenuItem: JMenuItem? = null
 
+    /** UI 컴포넌트에 리스너를 바인딩한다. */
     fun bind() {
         val columnsList = ui.columnsList
         val columnsModel = ui.columnsModel
@@ -203,14 +207,11 @@ class ToolWindowEventBinder(
             }
         }
 
-        ui.builderPreview.addMouseListener(object : java.awt.event.MouseAdapter() {
-            override fun mouseClicked(e: java.awt.event.MouseEvent) {
-                if (e.button != java.awt.event.MouseEvent.BUTTON1) return
-                val text = context.builder.buildName()
-                logic.copyText(text)
-                logic.showCopiedToast(text)
-            }
-        })
+        (ui.builderPreview as LinkLabel<*>).setListener(LinkListener { _, _ ->
+            val text = context.builder.buildName()
+            logic.copyText(text)
+            logic.showCopiedToast(text)
+        }, null)
 
         val menuMask = Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
         val inputMap = ui.resultList.getInputMap(JComponent.WHEN_FOCUSED)

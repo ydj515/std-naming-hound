@@ -23,22 +23,26 @@ import javax.swing.DefaultComboBoxModel
 import javax.swing.JPopupMenu
 import javax.swing.JMenuItem
 
+/** ToolWindow의 비즈니스 로직을 담당한다. */
 class ToolWindowLogic(private val context: ToolWindowContext) {
     private val ui = context.ui
     private val project = context.toolWindow.project
 
+    /** 도메인 콤보박스를 갱신한다. */
     fun refreshDomainCombo(domains: List<Domain>) {
         val names = mutableListOf("선택 안 함")
         names.addAll(domains.map { it.name })
         ui.domainCombo.model = DefaultComboBoxModel(names.toTypedArray())
     }
 
+    /** 도메인 이름을 기준으로 콤보 선택값을 변경한다. */
     fun selectDomainByName(name: String?) {
         val target = name?.trim().orEmpty()
         if (target.isBlank()) return
         ui.domainCombo.selectedItem = target
     }
 
+    /** 데이터셋 메타 정보를 UI에 반영한다. */
     fun refreshMeta() {
         val dataset = context.datasetRepository.getDataset()
         val meta = dataset.meta
@@ -54,6 +58,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         refreshDomainCombo(dataset.domains)
     }
 
+    /** 검색 결과를 갱신한다. */
     fun updateResults(query: String) {
         val allowedTypes = mutableSetOf<SearchItemType>().apply {
             if (ui.termFilterCheck.isSelected) add(SearchItemType.TERM)
@@ -74,6 +79,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         }
     }
 
+    /** Builder 프리뷰와 토큰 UI를 갱신한다. */
     fun updateBuilderPreview() {
         val name = context.builder.buildName()
         val text = if (name.isBlank()) "" else name
@@ -100,18 +106,21 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         ui.builderPreview.repaint()
     }
 
+    /** 선택 상태에 따라 컨텍스트 메뉴 활성화를 갱신한다. */
     fun updateActionButtons(addBuilderMenuItem: JMenuItem?) {
         val item = ui.resultList.selectedValue
         val canAdd = ui.builderModeCheck.isSelected &&
-            (item?.type == SearchItemType.WORD || item?.type == SearchItemType.TERM)
+                (item?.type == SearchItemType.WORD || item?.type == SearchItemType.TERM)
         addBuilderMenuItem?.isEnabled = canAdd
     }
 
+    /** 텍스트를 클립보드에 복사한다. */
     fun copyText(text: String) {
         if (text.isBlank()) return
         CopyPasteManager.getInstance().setContents(StringSelection(text))
     }
 
+    /** 현재 에디터 커서 위치에 텍스트를 삽입한다. */
     fun insertText(text: String) {
         if (text.isBlank()) return
         val editor = FileEditorManager.getInstance(project).selectedTextEditor
@@ -126,6 +135,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         }
     }
 
+    /** 선택 항목의 복사/삽입 대상 텍스트를 결정한다. */
     fun resolveSelectedText(item: SearchItem): String {
         return when (item.type) {
             SearchItemType.TERM -> item.abbr ?: item.primaryEn ?: item.titleKo
@@ -134,6 +144,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         }
     }
 
+    /** 선택 항목을 Builder에 추가한다. */
     fun addSelectedItemToBuilder(item: SearchItem) {
         when (item.type) {
             SearchItemType.WORD -> {
@@ -145,6 +156,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
                     updateBuilderPreview()
                 }
             }
+
             SearchItemType.TERM -> {
                 val term = context.datasetRepository.getDataset()
                     .terms
@@ -164,22 +176,26 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
                     updateBuilderPreview()
                 }
             }
+
             else -> Unit
         }
     }
 
+    /** 도메인 이름으로 Domain을 찾는다. */
     fun findDomainByName(name: String?): Domain? {
         val key = name?.trim().orEmpty()
         if (key.isBlank()) return null
         return context.datasetRepository.getDataset().domains.firstOrNull { it.name == key }
     }
 
+    /** 콤보에서 선택된 도메인을 반환한다. */
     fun selectedDomainFromCombo(): Domain? {
         val selected = ui.domainCombo.selectedItem as? String ?: return null
         if (selected == "선택 안 함") return null
         return findDomainByName(selected)
     }
 
+    /** Builder 기준으로 사용할 도메인을 결정한다. */
     fun findDomainForBuilder(): Domain {
         val selected = selectedDomainFromCombo()
         if (selected != null) return selected
@@ -189,16 +205,19 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
                 .domains
                 .getOrNull((item.payloadRef as DomainRef).index)
                 ?: defaultDomain()
+
             SearchItemType.TERM -> {
                 val term = context.datasetRepository.getDataset()
                     .terms
                     .getOrNull((item.payloadRef as TermRef).index)
                 findDomainByName(term?.domainName) ?: defaultDomain()
             }
+
             else -> defaultDomain()
         }
     }
 
+    /** Builder 결과로 컬럼 엔트리를 생성한다. */
     fun buildColumnEntryForBuilder(): ColumnEntry? {
         val name = context.builder.buildName()
         if (name.isBlank()) {
@@ -225,6 +244,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         )
     }
 
+    /** 스테이징된 컬럼 목록으로 컬럼 SQL을 생성한다. */
     fun buildColumnOutputFromColumns(): String {
         if (ui.columnsModel.size == 0) return ""
         return ui.columnsModel.elements().asSequence()
@@ -236,6 +256,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
             .joinToString("\n")
     }
 
+    /** 스테이징된 컬럼 목록으로 CREATE TABLE SQL을 생성한다. */
     fun buildCreateTableFromColumns(): String {
         if (ui.columnsModel.size == 0) return ""
         val dialect = DbDialect.fromName(context.settings.state.dbDialect)
@@ -250,25 +271,30 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
             .map { it.commentSql }
             .filterNot { it.isNullOrBlank() }
             .toList()
-        return if (comments.isEmpty()) create else "$create\n${comments.joinToString("\n")}" 
+        return if (comments.isEmpty()) create else "$create\n${comments.joinToString("\n")}"
     }
 
+    /** Output 영역에 표시할 SQL을 생성한다. */
     fun buildOutputSql(): String = buildCreateTableFromColumns()
 
+    /** Output 라벨에 현재 DB 방언을 반영한다. */
     fun updateOutputLabel() {
         ui.outputLabel.text = "Output (SQL - ${context.settings.state.dbDialect})"
     }
 
+    /** Output 영역을 즉시 갱신한다. */
     fun updateOutputPreview() {
         updateOutputLabel()
         ui.outputArea.text = buildOutputSql()
     }
 
+    /** Output 영역 갱신을 디바운스한다. */
     fun scheduleOutputRefresh() {
         context.outputAlarm.cancelAllRequests()
         context.outputAlarm.addRequest({ updateOutputPreview() }, 300)
     }
 
+    /** DB 방언 변경에 맞춰 컬럼 정의를 재생성한다. */
     fun rebuildColumnEntriesForDialect() {
         if (ui.columnsModel.size == 0) return
         val dialect = DbDialect.fromName(context.settings.state.dbDialect)
@@ -294,6 +320,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         updated.forEach { ui.columnsModel.addElement(it) }
     }
 
+    /** 복사 완료 알림을 표시한다. */
     fun showCopiedToast(text: String) {
         NotificationGroupManager.getInstance()
             .getNotificationGroup("StdNamingHound")
@@ -301,6 +328,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
             .notify(project)
     }
 
+    /** 팝업 메뉴에 테마 색을 적용한다. */
     fun applyPopupTheme(popup: JPopupMenu) {
         val bg = javax.swing.UIManager.getColor("PopupMenu.background")
             ?: javax.swing.UIManager.getColor("Menu.background")
@@ -327,14 +355,17 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         }
     }
 
+    /** 기본 도메인을 반환한다. */
     fun defaultDomain(): Domain = DEFAULT_DOMAIN
 
-    data class ColumnParts(
+    /** 컬럼 정의/코멘트 SQL 분리 결과다. */
+    private data class ColumnParts(
         val definition: String,
         val commentSql: String?,
     )
 
-    fun splitColumnSql(sql: String): ColumnParts {
+    /** 단일 컬럼 SQL을 정의/코멘트로 분리한다. */
+    private fun splitColumnSql(sql: String): ColumnParts {
         val lines = sql.split("\n")
         val definition = lines.firstOrNull()?.trim()?.removeSuffix(";").orEmpty()
         val comment = lines.drop(1).joinToString("\n").trim().ifBlank { null }
@@ -342,6 +373,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
     }
 
     companion object {
+        /** 도메인이 없을 때 사용하는 기본 도메인이다. */
         private val DEFAULT_DOMAIN = Domain(
             name = "기본V255",
             dataType = "VARCHAR",

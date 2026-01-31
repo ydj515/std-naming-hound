@@ -12,6 +12,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -26,7 +27,9 @@ import javax.swing.JSplitPane
 import javax.swing.DropMode
 import com.intellij.openapi.fileTypes.PlainTextFileType
 
+/** ToolWindow UI 컴포넌트를 생성한다. */
 class ToolWindowUiBuilder {
+    /** 프로젝트 컨텍스트를 사용해 UI를 구성한다. */
     fun build(project: Project): ToolWindowUi {
         val root = JBPanel<JBPanel<*>>().apply { layout = BorderLayout() }
 
@@ -37,7 +40,7 @@ class ToolWindowUiBuilder {
         val wordFilterCheck = JCheckBox("단어", true)
         val builderModeCheck = JCheckBox("Builder")
         val settingsButton = JButton(AllIcons.General.GearPlain).apply {
-            toolTipText = "설정 열기"
+            toolTipText = "open settings"
             isFocusable = false
             isContentAreaFilled = false
             border = JBUI.Borders.empty(2)
@@ -50,7 +53,10 @@ class ToolWindowUiBuilder {
             dropMode = DropMode.INSERT
         }
         val metaLabel = JBLabel()
-        val builderPreview = JBLabel("").apply { toolTipText = "" }
+        val builderPreview = LinkLabel<Any?>().apply {
+            text = ""
+            toolTipText = ""
+        }
         val tokensPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0))
         val domainCombo = JComboBox<String>()
         domainCombo.preferredSize = JBUI.size(JBUI.scale(165), domainCombo.preferredSize.height)

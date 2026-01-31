@@ -7,6 +7,7 @@ import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBPanel
+import com.intellij.ui.components.labels.LinkLabel
 import java.awt.Component
 import javax.swing.DefaultListModel
 import javax.swing.JButton
@@ -26,7 +27,7 @@ class ToolWindowUi(
     val columnsModel: DefaultListModel<ColumnEntry>,
     val columnsList: JBList<ColumnEntry>,
     val metaLabel: JBLabel,
-    val builderPreview: JBLabel,
+    val builderPreview: LinkLabel<Any?>,
     val tokensPanel: JPanel,
     val domainCombo: JComboBox<String>,
     val builderClearButton: JButton,
