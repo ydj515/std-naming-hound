@@ -3,9 +3,9 @@ package com.github.ydj515.stdnaminghound.toolWindow.util
 import com.github.ydj515.stdnaminghound.toolWindow.ColumnEntry
 import javax.swing.DefaultListModel
 
+/** 컬럼 이름 중복 여부를 검사한다. */
 fun DefaultListModel<ColumnEntry>.containsName(name: String): Boolean {
-    for (i in 0 until size) {
-        if (getElementAt(i).name == name) return true
+    return (0 until size).any {
+        getElementAt(it).name == name
     }
-    return false
 }
