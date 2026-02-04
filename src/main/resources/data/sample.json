@@ -1,0 +1,39 @@
+{
+  "version": "2026.01",
+  "meta": {
+    "dataset_version": "2026.01",
+    "source": "custom",
+    "generated_at": "2026-01-24T12:00:00Z",
+    "counts": { "terms": 1, "words": 1, "domains": 1 }
+  },
+  "terms": [
+    {
+      "koName": "등록가능여부",
+      "abbr": "REG_PSBLTY_YN",
+      "description": "등록 가능한지 여부",
+      "domainName": "여부C1",
+      "synonyms": ["등록가능"]
+    }
+  ],
+  "words": [
+    {
+      "koName": "등록",
+      "enName": "Registration",
+      "abbr": "REG",
+      "description": "등록 행위",
+      "synonyms": [],
+      "isFormWord": false
+    }
+  ],
+  "domains": [
+    {
+      "name": "여부C1",
+      "dataType": "CHAR",
+      "length": 1,
+      "scale": null,
+      "storageFormat": "Y/N",
+      "displayFormat": "Y/N",
+      "allowedValues": "Y or N"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 package com.github.ydj515.stdnaminghound.settings
 
 import com.github.ydj515.stdnaminghound.search.SearchIndexRepository
+import com.github.ydj515.stdnaminghound.storage.DatasetExportService
 import com.github.ydj515.stdnaminghound.storage.DatasetRepository
 import com.github.ydj515.stdnaminghound.storage.MergePolicy
 import com.github.ydj515.stdnaminghound.builder.WordBuilder
@@ -19,15 +20,25 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.util.ui.JBUI
+import com.github.ydj515.stdnaminghound.util.readResourceText
 import java.awt.BorderLayout
+import java.awt.FlowLayout
+import java.io.FileOutputStream
 import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
 
 /** 설정 UI를 구성하고 변경 사항을 적용한다. */
 class StdNamingHoundConfigurable : Configurable {
+    private companion object {
+        const val MERGED_CHOICE = 0
+        const val ORIGINAL_CHOICE = 1
+        const val CANCEL_CHOICE = 2
+    }
     private val settings: StdNamingHoundSettings = ApplicationManager.getApplication().service()
     private val datasetRepository: DatasetRepository = ApplicationManager.getApplication().service()
+    private val datasetExportService: DatasetExportService = ApplicationManager.getApplication().service()
     private val searchIndexRepository: SearchIndexRepository = ApplicationManager.getApplication().service()
     private val validator = CustomDatasetValidator()
 
@@ -42,6 +53,7 @@ class StdNamingHoundConfigurable : Configurable {
     }
     private val mergePolicyCombo = JComboBox(MergePolicy.entries.toTypedArray()).apply {
         minimumSize = java.awt.Dimension(220, minimumSize.height)
+        preferredSize = java.awt.Dimension(220, preferredSize.height)
     }
     private val customJsonArea = JBTextArea().apply {
         lineWrap = true
@@ -51,11 +63,18 @@ class StdNamingHoundConfigurable : Configurable {
     private val loadFileButton = javax.swing.JButton("Import JSON")
     private val downloadSampleButton = javax.swing.JButton("Download Sample")
     private val resetButton = javax.swing.JButton("Reset to Default")
+    private val exportBaseDataButton = javax.swing.JButton("Export Base Data")
 
     /** 설정 UI 컴포넌트를 생성한다. */
     override fun createComponent(): JComponent {
         if (root == null) {
             root = JPanel(BorderLayout())
+            val buttonsPanel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0)).apply {
+                add(loadFileButton)
+                add(downloadSampleButton)
+                add(resetButton)
+                add(exportBaseDataButton)
+            }
             val content = panel {
                 row {
                     cell(useCustomOnlyCheck)
@@ -83,13 +102,11 @@ class StdNamingHoundConfigurable : Configurable {
                 }
                 row("Preview") {
                     val scroll = JBScrollPane(customJsonArea)
-                    scroll.preferredSize = java.awt.Dimension(600, 240)
+                    scroll.preferredSize = java.awt.Dimension(475, 240)
                     cell(scroll)
                 }
                 row {
-                    cell(loadFileButton)
-                    cell(downloadSampleButton)
-                    cell(resetButton)
+                    cell(buttonsPanel)
                 }
             }
             root?.add(content, BorderLayout.CENTER)
@@ -121,17 +138,21 @@ class StdNamingHoundConfigurable : Configurable {
                 dialog.save(null as java.nio.file.Path?, "std-naming-hound.sample.json") ?: return@addActionListener
             val target = wrapper.file?.toPath()?.toFile()
             val virtualFile = wrapper.virtualFile
-            val content = sampleJson()
+            val content = readResourceText("data/sample.json")
             when {
                 virtualFile != null -> VfsUtil.saveText(virtualFile, content)
                 target != null -> target.writeText(content)
                 else -> return@addActionListener
             }
-            Messages.showInfoMessage("샘플 JSON이 저장되었습니다.", "저장 완료")
+            Messages.showInfoMessage("The sample JSON has been saved.", "Save Complete")
         }
 
         resetButton.addActionListener {
             customJsonArea.text = ""
+        }
+
+        exportBaseDataButton.addActionListener {
+            exportDatasetZipWithChoice()
         }
 
         return root!!
@@ -200,48 +221,55 @@ class StdNamingHoundConfigurable : Configurable {
         root = null
     }
 
-    /** 샘플 JSON 내용을 반환한다. */
-    private fun sampleJson(): String {
-        return """
-            {
-              "version": "2026.01",
-              "meta": {
-                "dataset_version": "2026.01",
-                "source": "custom",
-                "generated_at": "2026-01-24T12:00:00Z",
-                "counts": { "terms": 1, "words": 1, "domains": 1 }
-              },
-              "terms": [
-                {
-                  "koName": "등록가능여부",
-                  "abbr": "REG_PSBLTY_YN",
-                  "description": "등록 가능한지 여부",
-                  "domainName": "여부C1",
-                  "synonyms": ["등록가능"]
+    private fun exportDatasetZipWithChoice() {
+        val choice = Messages.showDialog(
+            null,
+            "Choose the data to export.\nOriginal (base resources) / Merged (final dataset).",
+            "Export Dataset",
+            arrayOf("Merged", "Original", "Cancel"),
+            0,
+            null
+        )
+        if (choice == CANCEL_CHOICE || choice == -1) return
+
+        val descriptor = FileSaverDescriptor("Export Dataset", "Save the selected dataset as a ZIP file.", "zip")
+        val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, null)
+        val wrapper = dialog.save(null as java.nio.file.Path?, "std-naming-hound-base-data.zip") ?: return
+        try {
+            val virtualFile = wrapper.virtualFile
+            val targetFile = wrapper.file?.toPath()?.toFile()
+            when {
+                virtualFile != null -> {
+                    ApplicationManager.getApplication().runWriteAction {
+                        virtualFile.getOutputStream(this).use { stream ->
+                            writeZip(stream, choice)
+                        }
+                    }
                 }
-              ],
-              "words": [
-                {
-                  "koName": "등록",
-                  "enName": "Registration",
-                  "abbr": "REG",
-                  "description": "등록 행위",
-                  "synonyms": [],
-                  "isFormWord": false
+                targetFile != null -> {
+                    FileOutputStream(targetFile).use { stream ->
+                        writeZip(stream, choice)
+                    }
                 }
-              ],
-              "domains": [
-                {
-                  "name": "여부C1",
-                  "dataType": "CHAR",
-                  "length": 1,
-                  "scale": null,
-                  "storageFormat": "Y/N",
-                  "displayFormat": "Y/N",
-                  "allowedValues": "Y or N"
-                }
-              ]
+                else -> return
             }
-        """.trimIndent()
+            val message = if (choice == MERGED_CHOICE) {
+                "The merged dataset has been saved as a ZIP file."
+            } else {
+                "The base dataset has been saved as a ZIP file."
+            }
+            Messages.showInfoMessage(message, "Export Complete")
+        } catch (e: Exception) {
+            Messages.showErrorDialog("Failed to save ZIP: ${e.message}", "Export Failed")
+        }
     }
+
+    private fun writeZip(stream: java.io.OutputStream, choice: Int) {
+        if (choice == MERGED_CHOICE) {
+            datasetExportService.writeMergedDatasetZip(stream)
+        } else {
+            datasetExportService.writeBaseDatasetZip(stream)
+        }
+    }
+
 }
