@@ -62,7 +62,7 @@ class ToolWindowUiBuilder {
         domainCombo.preferredSize = JBUI.size(JBUI.scale(165), domainCombo.preferredSize.height)
         domainCombo.maximumSize = JBUI.size(JBUI.scale(165), domainCombo.preferredSize.height)
         val previewHeight = JBUI.scale(24)
-        builderPreview.preferredSize = JBUI.size(JBUI.scale(220), previewHeight)
+        builderPreview.preferredSize = JBUI.size(JBUI.scale(180), previewHeight)
         builderPreview.minimumSize = JBUI.size(JBUI.scale(120), previewHeight)
         builderPreview.maximumSize = java.awt.Dimension(Int.MAX_VALUE, previewHeight)
         val builderClearButton = JButton(AllIcons.Actions.GC).apply { toolTipText = "Clear Builder" }
