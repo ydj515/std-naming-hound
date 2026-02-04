@@ -138,7 +138,7 @@ class StdNamingHoundConfigurable : Configurable {
                 target != null -> target.writeText(content)
                 else -> return@addActionListener
             }
-            Messages.showInfoMessage("샘플 JSON이 저장되었습니다.", "저장 완료")
+            Messages.showInfoMessage("The sample JSON has been saved.", "Save Complete")
         }
 
         resetButton.addActionListener {
