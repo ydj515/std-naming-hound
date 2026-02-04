@@ -21,6 +21,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.JBUI
+import com.github.ydj515.stdnaminghound.util.readResourceText
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.io.FileOutputStream
@@ -30,6 +31,11 @@ import javax.swing.JPanel
 
 /** 설정 UI를 구성하고 변경 사항을 적용한다. */
 class StdNamingHoundConfigurable : Configurable {
+    private companion object {
+        const val MERGED_CHOICE = 0
+        const val ORIGINAL_CHOICE = 1
+        const val CANCEL_CHOICE = 2
+    }
     private val settings: StdNamingHoundSettings = ApplicationManager.getApplication().service()
     private val datasetRepository: DatasetRepository = ApplicationManager.getApplication().service()
     private val datasetExportService: DatasetExportService = ApplicationManager.getApplication().service()
@@ -224,7 +230,7 @@ class StdNamingHoundConfigurable : Configurable {
             0,
             null
         )
-        if (choice == 2 || choice == -1) return
+        if (choice == CANCEL_CHOICE || choice == -1) return
 
         val descriptor = FileSaverDescriptor("Export Dataset", "Save the selected dataset as a ZIP file.", "zip")
         val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, null)
@@ -247,7 +253,7 @@ class StdNamingHoundConfigurable : Configurable {
                 }
                 else -> return
             }
-            val message = if (choice == 0) {
+            val message = if (choice == MERGED_CHOICE) {
                 "The merged dataset has been saved as a ZIP file."
             } else {
                 "The base dataset has been saved as a ZIP file."
@@ -259,16 +265,11 @@ class StdNamingHoundConfigurable : Configurable {
     }
 
     private fun writeZip(stream: java.io.OutputStream, choice: Int) {
-        if (choice == 0) {
+        if (choice == MERGED_CHOICE) {
             datasetExportService.writeMergedDatasetZip(stream)
         } else {
             datasetExportService.writeBaseDatasetZip(stream)
         }
     }
 
-    private fun readResourceText(path: String): String {
-        val stream = javaClass.classLoader.getResourceAsStream(path)
-            ?: throw IllegalStateException("리소스를 찾을 수 없습니다: $path")
-        return stream.use { it.readBytes().toString(Charsets.UTF_8) }
-    }
 }
