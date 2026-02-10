@@ -43,6 +43,18 @@ class StdNamingHoundConfigurable : Configurable {
         const val MERGED_CHOICE = 0
         const val ORIGINAL_CHOICE = 1
         const val CANCEL_CHOICE = 2
+        private const val VERSION_PREFIX = "Your version is v"
+        private const val UNCONFIRMED_VERSION_TEXT = "Your version is not confirmed"
+        private const val SAMPLE_JSON_FILENAME = "std-naming-hound.sample.json"
+        private const val BASE_DATA_ZIP_FILENAME = "std-naming-hound-base-data.zip"
+        private const val SAMPLE_JSON_RESOURCE_PATH = "data/sample.json"
+        private const val DOWNLOAD_SAMPLE_TITLE = "Download Sample JSON"
+        private const val DOWNLOAD_SAMPLE_DESCRIPTION = "샘플 커스텀 JSON 파일을 저장합니다."
+        private const val EXPORT_DATASET_TITLE = "Export Dataset"
+        private const val EXPORT_DATASET_DESCRIPTION = "Save the selected dataset as a ZIP file."
+        private const val EXPORT_MESSAGE_MERGED = "The merged dataset has been saved as a ZIP file."
+        private const val EXPORT_MESSAGE_BASE = "The base dataset has been saved as a ZIP file."
+        private const val EXPORT_FAILED_MESSAGE_PREFIX = "Failed to save ZIP: "
     }
 
     private val settings: StdNamingHoundSettings = ApplicationManager.getApplication().service()
@@ -244,9 +256,9 @@ class StdNamingHoundConfigurable : Configurable {
         val meta = dataset.meta
         val versionValue = meta?.datasetVersion?.trim().orEmpty()
         datasetInfoLabel.text = if (versionValue.isNotBlank()) {
-            "Your version is v$versionValue"
+            "$VERSION_PREFIX$versionValue"
         } else {
-            "Your version is not confirmed"
+            UNCONFIRMED_VERSION_TEXT
         }
         datasetInfoHelp.toolTipText = buildString {
             append("terms: ").append(dataset.terms.size)
@@ -258,12 +270,12 @@ class StdNamingHoundConfigurable : Configurable {
 
     /** 샘플 JSON을 저장할 위치를 선택받아 저장한다. */
     private fun downloadSample() {
-        val descriptor = FileSaverDescriptor("Download Sample JSON ", "샘플 커스텀 JSON 파일을 저장합니다.", "json")
+        val descriptor = FileSaverDescriptor(DOWNLOAD_SAMPLE_TITLE, DOWNLOAD_SAMPLE_DESCRIPTION, "json")
         val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, null)
-        val wrapper = dialog.save(null as java.nio.file.Path?, "std-naming-hound.sample.json") ?: return
+        val wrapper = dialog.save(null, SAMPLE_JSON_FILENAME) ?: return
         val target = wrapper.file?.toPath()?.toFile()
         val virtualFile = wrapper.virtualFile
-        val content = readResourceText("data/sample.json")
+        val content = readResourceText(SAMPLE_JSON_RESOURCE_PATH)
         when {
             virtualFile != null -> VfsUtil.saveText(virtualFile, content)
             target != null -> target.writeText(content)
@@ -277,16 +289,16 @@ class StdNamingHoundConfigurable : Configurable {
         val choice = Messages.showDialog(
             null,
             "Choose the data to export.\nOriginal (base resources) / Merged (final dataset).",
-            "Export Dataset",
+            EXPORT_DATASET_TITLE,
             arrayOf("Merged", "Original", "Cancel"),
             0,
             null
         )
         if (choice == CANCEL_CHOICE || choice == -1) return
 
-        val descriptor = FileSaverDescriptor("Export Dataset", "Save the selected dataset as a ZIP file.", "zip")
+        val descriptor = FileSaverDescriptor(EXPORT_DATASET_TITLE, EXPORT_DATASET_DESCRIPTION, "zip")
         val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, null)
-        val wrapper = dialog.save(null as java.nio.file.Path?, "std-naming-hound-base-data.zip") ?: return
+        val wrapper = dialog.save(null, BASE_DATA_ZIP_FILENAME) ?: return
         try {
             val virtualFile = wrapper.virtualFile
             val targetFile = wrapper.file?.toPath()?.toFile()
@@ -308,13 +320,13 @@ class StdNamingHoundConfigurable : Configurable {
                 else -> return
             }
             val message = if (choice == MERGED_CHOICE) {
-                "The merged dataset has been saved as a ZIP file."
+                EXPORT_MESSAGE_MERGED
             } else {
-                "The base dataset has been saved as a ZIP file."
+                EXPORT_MESSAGE_BASE
             }
             Messages.showInfoMessage(message, "Export Complete")
         } catch (e: Exception) {
-            Messages.showErrorDialog("Failed to save ZIP: ${e.message}", "Export Failed")
+            Messages.showErrorDialog("${EXPORT_FAILED_MESSAGE_PREFIX}${e.message}", "Export Failed")
         }
     }
 
