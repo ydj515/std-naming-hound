@@ -20,12 +20,19 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
+import com.intellij.ui.components.labels.LinkLabel
+import com.intellij.ui.components.labels.LinkListener
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.RowLayout
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import com.github.ydj515.stdnaminghound.util.readResourceText
+import com.intellij.icons.AllIcons.General.ContextHelp
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.io.FileOutputStream
+import javax.swing.Box
 import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -37,6 +44,7 @@ class StdNamingHoundConfigurable : Configurable {
         const val ORIGINAL_CHOICE = 1
         const val CANCEL_CHOICE = 2
     }
+
     private val settings: StdNamingHoundSettings = ApplicationManager.getApplication().service()
     private val datasetRepository: DatasetRepository = ApplicationManager.getApplication().service()
     private val datasetExportService: DatasetExportService = ApplicationManager.getApplication().service()
@@ -45,8 +53,8 @@ class StdNamingHoundConfigurable : Configurable {
 
     private var root: JPanel? = null
     private val useCustomOnlyCheck = JBCheckBox("Use only custom data")
-    private val enableFuzzyCheck = JBCheckBox("Enable fuzzy search")
     private val datasetInfoLabel = JBLabel()
+    private val datasetInfoHelp = JBLabel(com.intellij.icons.AllIcons.General.ContextHelp)
     private val dbDialectCombo = JComboBox(arrayOf("Postgres", "Oracle", "MySQL")).apply {
         minimumSize = java.awt.Dimension(220, minimumSize.height)
     }
@@ -63,60 +71,80 @@ class StdNamingHoundConfigurable : Configurable {
         isEditable = false
     }
     private val loadFileButton = javax.swing.JButton("Import JSON")
-    private val downloadSampleButton = javax.swing.JButton("Download Sample")
-    private val resetButton = javax.swing.JButton("Reset to Default")
+    private val resetButton = javax.swing.JButton("Reset")
     private val exportBaseDataButton = javax.swing.JButton("Export Base Data")
+    private val downloadSampleLink = LinkLabel.create("Sample download here", null).apply {
+        border = JBUI.Borders.empty(0, 0, JBUI.scale(10), 0)
+    }
 
     /** 설정 UI 컴포넌트를 생성한다. */
     override fun createComponent(): JComponent {
         if (root == null) {
             root = JPanel(BorderLayout())
-            val buttonsPanel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0)).apply {
+            val buttonsPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+                border = JBUI.Borders.empty(JBUI.scale(6), 0, JBUI.scale(6), 0)
                 add(loadFileButton)
-                add(downloadSampleButton)
-                add(resetButton)
+                add(Box.createHorizontalStrut(JBUI.scale(8)))
                 add(exportBaseDataButton)
+                add(Box.createHorizontalStrut(JBUI.scale(8)))
+                add(resetButton)
             }
+
             val content = panel {
-                row {
-                    cell(useCustomOnlyCheck)
+                group("Environment") {
+                    row("DB Dialect") {
+                        cell(dbDialectCombo)
+                        val help =
+                            JBLabel(ContextHelp).apply {
+                                toolTipText = "Choose DB dialect to use in SQL Generator"
+                            }
+                        cell(help)
+                    }
+                    row("Case Style") {
+                        cell(caseStyleCombo)
+                    }
+                    row("Merge Policy") {
+                        cell(mergePolicyCombo)
+                    }
                 }
-                row("DB Dialect") {
-                    cell(dbDialectCombo)
-                    val help =
-                        com.intellij.ui.components.JBLabel(com.intellij.icons.AllIcons.General.ContextHelp).apply {
-                            toolTipText = "Choose DB dialect to use in SQL Generator"
+                group("Merge data") {
+                    row {
+                        cell(useCustomOnlyCheck)
+                    }
+                    row {
+                        cell(datasetInfoLabel)
+                        cell(datasetInfoHelp)
+                    }
+                    row {
+                        val info = JBLabel(
+                            "<html>version is required, but terms/words/domains can be left blank.<br/>" +
+                                    "Check the 'Merge Policy' and 'Use only custom data' options together.</html>"
+                        ).apply {
+                            foreground = UIUtil.getContextHelpForeground()
+                            border = JBUI.Borders.empty(0, 0, JBUI.scale(10), 0)
                         }
-                    cell(help)
-                }
-                row("Case Style") {
-                    cell(caseStyleCombo)
-                }
-                row("Merge Policy") {
-                    cell(mergePolicyCombo)
-                }
-                row {
-                    val info = com.intellij.ui.components.JBLabel(
-                        "<html>version is required, but terms/words/domains can be left blank.<br/>" +
-                                "Check the 'Merge Policy' and 'Use only custom data' options together.</html>"
-                    )
-                    cell(info)
-                }
-                row("Preview") {
-                    val scroll = JBScrollPane(customJsonArea)
-                    scroll.preferredSize = java.awt.Dimension(475, 240)
-                    cell(scroll)
-                }
-                row {
-                    cell(buttonsPanel)
-                }
-                row {
-                    cell(datasetInfoLabel)
+                        cell(info)
+                    }
+                    row {
+                        cell(downloadSampleLink)
+                    }.layout(RowLayout.PARENT_GRID)
+                    row {
+                        cell(buttonsPanel).align(AlignX.LEFT)
+                    }.layout(RowLayout.PARENT_GRID)
+                    row("Preview") {
+                        val scroll = JBScrollPane(customJsonArea)
+                        scroll.preferredSize = java.awt.Dimension(475, 240)
+                        cell(scroll)
+                    }
                 }
             }
             root?.add(content, BorderLayout.CENTER)
             updateDatasetInfoLabel()
         }
+
+        downloadSampleLink.setListener(LinkListener { _, _ ->
+            downloadSample()
+        }, null)
 
         loadFileButton.addActionListener {
             val descriptor = FileChooserDescriptor(true, false, false, false, false, false)
@@ -137,22 +165,6 @@ class StdNamingHoundConfigurable : Configurable {
             Messages.showInfoMessage("커스텀 JSON이 적용되었습니다.", "Import 완료")
         }
 
-        downloadSampleButton.addActionListener {
-            val descriptor = FileSaverDescriptor("Download Sample JSON ", "샘플 커스텀 JSON 파일을 저장합니다.", "json")
-            val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, null)
-            val wrapper =
-                dialog.save(null as java.nio.file.Path?, "std-naming-hound.sample.json") ?: return@addActionListener
-            val target = wrapper.file?.toPath()?.toFile()
-            val virtualFile = wrapper.virtualFile
-            val content = readResourceText("data/sample.json")
-            when {
-                virtualFile != null -> VfsUtil.saveText(virtualFile, content)
-                target != null -> target.writeText(content)
-                else -> return@addActionListener
-            }
-            Messages.showInfoMessage("The sample JSON has been saved.", "Save Complete")
-        }
-
         resetButton.addActionListener {
             customJsonArea.text = ""
         }
@@ -168,7 +180,6 @@ class StdNamingHoundConfigurable : Configurable {
     override fun isModified(): Boolean {
         val state = settings.state
         if (useCustomOnlyCheck.isSelected != state.useCustomOnly) return true
-        if (enableFuzzyCheck.isSelected != state.enableFuzzy) return true
         if (dbDialectCombo.selectedItem as String != state.dbDialect) return true
         val selectedPolicy = (mergePolicyCombo.selectedItem as MergePolicy).name
         if (selectedPolicy != state.mergePolicy) return true
@@ -193,7 +204,6 @@ class StdNamingHoundConfigurable : Configurable {
     private fun applySettings() {
         val state = settings.state
         state.useCustomOnly = useCustomOnlyCheck.isSelected
-        state.enableFuzzy = enableFuzzyCheck.isSelected
         state.dbDialect = dbDialectCombo.selectedItem as String
         state.mergePolicy = (mergePolicyCombo.selectedItem as MergePolicy).name
         state.defaultCaseStyle = (caseStyleCombo.selectedItem as WordBuilder.CaseStyle).name
@@ -211,7 +221,6 @@ class StdNamingHoundConfigurable : Configurable {
     override fun reset() {
         val state = settings.state
         useCustomOnlyCheck.isSelected = state.useCustomOnly
-        enableFuzzyCheck.isSelected = state.enableFuzzy
         dbDialectCombo.selectedItem = state.dbDialect
         mergePolicyCombo.selectedItem = MergePolicy.fromName(state.mergePolicy)
         caseStyleCombo.selectedItem = runCatching {
@@ -229,19 +238,41 @@ class StdNamingHoundConfigurable : Configurable {
         root = null
     }
 
+    /** 데이터셋 버전 라벨과 도움말 툴팁을 갱신한다. */
     private fun updateDatasetInfoLabel() {
         val dataset = datasetRepository.getDataset()
         val meta = dataset.meta
-        datasetInfoLabel.text = buildString {
-            append("v")
-            append(meta?.datasetVersion ?: "-")
-            append(" | t ").append(dataset.terms.size)
-            append(", w ").append(dataset.words.size)
-            append(", d ").append(dataset.domains.size)
-            append(" | idx ").append(searchIndexRepository.getIndex().entries.size)
+        val versionValue = meta?.datasetVersion?.trim().orEmpty()
+        datasetInfoLabel.text = if (versionValue.isNotBlank()) {
+            "Your version is v$versionValue"
+        } else {
+            "Your version is not confirmed"
+        }
+        datasetInfoHelp.toolTipText = buildString {
+            append("terms: ").append(dataset.terms.size)
+            append(", words: ").append(dataset.words.size)
+            append(", domain: ").append(dataset.domains.size)
+            append(", index: ").append(searchIndexRepository.getIndex().entries.size)
         }
     }
 
+    /** 샘플 JSON을 저장할 위치를 선택받아 저장한다. */
+    private fun downloadSample() {
+        val descriptor = FileSaverDescriptor("Download Sample JSON ", "샘플 커스텀 JSON 파일을 저장합니다.", "json")
+        val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, null)
+        val wrapper = dialog.save(null as java.nio.file.Path?, "std-naming-hound.sample.json") ?: return
+        val target = wrapper.file?.toPath()?.toFile()
+        val virtualFile = wrapper.virtualFile
+        val content = readResourceText("data/sample.json")
+        when {
+            virtualFile != null -> VfsUtil.saveText(virtualFile, content)
+            target != null -> target.writeText(content)
+            else -> return
+        }
+        Messages.showInfoMessage("The sample JSON has been saved.", "Save Complete")
+    }
+
+    /** 내보낼 데이터셋 종류를 선택받아 ZIP으로 저장한다. */
     private fun exportDatasetZipWithChoice() {
         val choice = Messages.showDialog(
             null,
@@ -267,11 +298,13 @@ class StdNamingHoundConfigurable : Configurable {
                         }
                     }
                 }
+
                 targetFile != null -> {
                     FileOutputStream(targetFile).use { stream ->
                         writeZip(stream, choice)
                     }
                 }
+
                 else -> return
             }
             val message = if (choice == MERGED_CHOICE) {
@@ -285,6 +318,7 @@ class StdNamingHoundConfigurable : Configurable {
         }
     }
 
+    /** 선택된 데이터셋 종류에 맞는 ZIP을 출력한다. */
     private fun writeZip(stream: java.io.OutputStream, choice: Int) {
         if (choice == MERGED_CHOICE) {
             datasetExportService.writeMergedDatasetZip(stream)
