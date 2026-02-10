@@ -272,8 +272,8 @@ class StdNamingHoundConfigurable : Configurable {
     private fun downloadSample() {
         val descriptor = FileSaverDescriptor(DOWNLOAD_SAMPLE_TITLE, DOWNLOAD_SAMPLE_DESCRIPTION, "json")
         val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, null)
-        val wrapper = dialog.save(null, SAMPLE_JSON_FILENAME) ?: return
-        val target = wrapper.file?.toPath()?.toFile()
+        val wrapper = dialog.save(null as java.nio.file.Path?, SAMPLE_JSON_FILENAME) ?: return
+        val target = wrapper.file.toPath().toFile()
         val virtualFile = wrapper.virtualFile
         val content = readResourceText(SAMPLE_JSON_RESOURCE_PATH)
         when {
@@ -298,7 +298,7 @@ class StdNamingHoundConfigurable : Configurable {
 
         val descriptor = FileSaverDescriptor(EXPORT_DATASET_TITLE, EXPORT_DATASET_DESCRIPTION, "zip")
         val dialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, null)
-        val wrapper = dialog.save(null, BASE_DATA_ZIP_FILENAME) ?: return
+        val wrapper = dialog.save(null as java.nio.file.Path?, BASE_DATA_ZIP_FILENAME) ?: return
         try {
             val virtualFile = wrapper.virtualFile
             val targetFile = wrapper.file?.toPath()?.toFile()
