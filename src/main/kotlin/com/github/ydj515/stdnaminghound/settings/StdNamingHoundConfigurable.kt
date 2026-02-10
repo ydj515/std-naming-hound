@@ -17,6 +17,7 @@ import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.dsl.builder.panel
@@ -45,6 +46,7 @@ class StdNamingHoundConfigurable : Configurable {
     private var root: JPanel? = null
     private val useCustomOnlyCheck = JBCheckBox("Use only custom data")
     private val enableFuzzyCheck = JBCheckBox("Enable fuzzy search")
+    private val datasetInfoLabel = JBLabel()
     private val dbDialectCombo = JComboBox(arrayOf("Postgres", "Oracle", "MySQL")).apply {
         minimumSize = java.awt.Dimension(220, minimumSize.height)
     }
@@ -83,7 +85,7 @@ class StdNamingHoundConfigurable : Configurable {
                     cell(dbDialectCombo)
                     val help =
                         com.intellij.ui.components.JBLabel(com.intellij.icons.AllIcons.General.ContextHelp).apply {
-                            toolTipText = "SQL Generator에서 사용할 DB 유형 선택\n(Choose DB dialect to use in SQL Generator)"
+                            toolTipText = "Choose DB dialect to use in SQL Generator"
                         }
                     cell(help)
                 }
@@ -108,8 +110,12 @@ class StdNamingHoundConfigurable : Configurable {
                 row {
                     cell(buttonsPanel)
                 }
+                row {
+                    cell(datasetInfoLabel)
+                }
             }
             root?.add(content, BorderLayout.CENTER)
+            updateDatasetInfoLabel()
         }
 
         loadFileButton.addActionListener {
@@ -194,6 +200,7 @@ class StdNamingHoundConfigurable : Configurable {
         state.customDatasetJson = customJsonArea.text.trim().ifBlank { null }
         datasetRepository.reload()
         searchIndexRepository.reload()
+        updateDatasetInfoLabel()
         ApplicationManager.getApplication()
             .messageBus
             .syncPublisher(StdNamingHoundSettings.TOPIC)
@@ -211,6 +218,7 @@ class StdNamingHoundConfigurable : Configurable {
             WordBuilder.CaseStyle.valueOf(state.defaultCaseStyle)
         }.getOrDefault(WordBuilder.CaseStyle.SNAKE_UPPER)
         customJsonArea.text = state.customDatasetJson.orEmpty()
+        updateDatasetInfoLabel()
     }
 
     /** 설정 화면에 표시될 이름을 반환한다. */
@@ -219,6 +227,19 @@ class StdNamingHoundConfigurable : Configurable {
     /** UI 리소스를 해제한다. */
     override fun disposeUIResources() {
         root = null
+    }
+
+    private fun updateDatasetInfoLabel() {
+        val dataset = datasetRepository.getDataset()
+        val meta = dataset.meta
+        datasetInfoLabel.text = buildString {
+            append("v")
+            append(meta?.datasetVersion ?: "-")
+            append(" | t ").append(dataset.terms.size)
+            append(", w ").append(dataset.words.size)
+            append(", d ").append(dataset.domains.size)
+            append(" | idx ").append(searchIndexRepository.getIndex().entries.size)
+        }
     }
 
     private fun exportDatasetZipWithChoice() {

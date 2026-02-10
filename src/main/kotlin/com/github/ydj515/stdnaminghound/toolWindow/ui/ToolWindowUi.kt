@@ -26,7 +26,6 @@ class ToolWindowUi(
     val settingsButton: JButton,
     val columnsModel: DefaultListModel<ColumnEntry>,
     val columnsList: JBList<ColumnEntry>,
-    val metaLabel: JBLabel,
     val builderPreview: LinkLabel<Any?>,
     val tokensPanel: JPanel,
     val domainCombo: JComboBox<String>,
