@@ -260,12 +260,9 @@ class StdNamingHoundConfigurable : Configurable {
         } else {
             UNCONFIRMED_VERSION_TEXT
         }
-        datasetInfoHelp.toolTipText = buildString {
-            append("terms: ").append(dataset.terms.size)
-            append(", words: ").append(dataset.words.size)
-            append(", domain: ").append(dataset.domains.size)
-            append(", index: ").append(searchIndexRepository.getIndex().entries.size)
-        }
+        val indexSize = searchIndexRepository.getIndex().entries.size
+        datasetInfoHelp.toolTipText =
+            "terms: ${dataset.terms.size}, words: ${dataset.words.size}, domain: ${dataset.domains.size}, index: $indexSize"
     }
 
     /** 샘플 JSON을 저장할 위치를 선택받아 저장한다. */
