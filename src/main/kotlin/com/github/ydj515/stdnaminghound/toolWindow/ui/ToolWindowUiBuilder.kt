@@ -52,7 +52,6 @@ class ToolWindowUiBuilder {
             dragEnabled = true
             dropMode = DropMode.INSERT
         }
-        val metaLabel = JBLabel()
         val builderPreview = LinkLabel<Any?>().apply {
             text = ""
             toolTipText = ""
@@ -187,7 +186,6 @@ class ToolWindowUiBuilder {
         val stagingPanel = JPanel(BorderLayout()).apply {
             add(builderPanel, BorderLayout.NORTH)
             add(columnsPanel, BorderLayout.CENTER)
-            add(metaLabel, BorderLayout.SOUTH)
         }
         val outputPanel = JPanel(BorderLayout()).apply {
             val header = JPanel(BorderLayout()).apply {
@@ -232,7 +230,6 @@ class ToolWindowUiBuilder {
             settingsButton = settingsButton,
             columnsModel = columnsModel,
             columnsList = columnsList,
-            metaLabel = metaLabel,
             builderPreview = builderPreview,
             tokensPanel = tokensPanel,
             domainCombo = domainCombo,

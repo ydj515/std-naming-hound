@@ -18,6 +18,8 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.ui.Messages
+import com.intellij.util.ui.JBUI
+import java.awt.Dimension
 import java.awt.datatransfer.StringSelection
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JPopupMenu
@@ -45,16 +47,6 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
     /** 데이터셋 메타 정보를 UI에 반영한다. */
     fun refreshMeta() {
         val dataset = context.datasetRepository.getDataset()
-        val meta = dataset.meta
-        ui.metaLabel.text = buildString {
-            append("Dataset")
-            if (meta?.datasetVersion != null) append(" v").append(meta.datasetVersion)
-            append(": ")
-            append("terms=").append(dataset.terms.size)
-            append(", words=").append(dataset.words.size)
-            append(", domains=").append(dataset.domains.size)
-            append(" | Index=").append(context.searchIndexRepository.getIndex().entries.size)
-        }
         refreshDomainCombo(dataset.domains)
     }
 
@@ -86,7 +78,12 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         ui.builderPreview.text = text
         ui.builderPreview.toolTipText = if (text.isBlank()) null else text
         ui.tokensPanel.removeAll()
-        context.builder.getTokens().forEachIndexed { index, word ->
+        val tokens = context.builder.getTokens()
+        if (tokens.isEmpty()) {
+            val emptyHeight = javax.swing.JButton("A").preferredSize.height
+            ui.tokensPanel.add(javax.swing.Box.createRigidArea(Dimension(0, emptyHeight)))
+        }
+        tokens.forEachIndexed { index, word ->
             if (index > 0) {
                 ui.tokensPanel.add(javax.swing.Box.createHorizontalStrut(8))
             }
