@@ -49,7 +49,7 @@ class StdNamingHoundConfigurable : Configurable {
         private const val BASE_DATA_ZIP_FILENAME = "std-naming-hound-base-data.zip"
         private const val SAMPLE_JSON_RESOURCE_PATH = "data/sample.json"
         private const val DOWNLOAD_SAMPLE_TITLE = "Download Sample JSON"
-        private const val DOWNLOAD_SAMPLE_DESCRIPTION = "샘플 커스텀 JSON 파일을 저장합니다."
+        private const val DOWNLOAD_SAMPLE_DESCRIPTION = "Saves a sample custom JSON file."
         private const val EXPORT_DATASET_TITLE = "Export Dataset"
         private const val EXPORT_DATASET_DESCRIPTION = "Save the selected dataset as a ZIP file."
         private const val EXPORT_MESSAGE_MERGED = "The merged dataset has been saved as a ZIP file."
