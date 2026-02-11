@@ -17,7 +17,6 @@ import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
-import javax.swing.Box
 import javax.swing.DefaultListModel
 import javax.swing.JButton
 import javax.swing.JCheckBox
@@ -56,7 +55,7 @@ class ToolWindowUiBuilder {
             text = ""
             toolTipText = ""
         }
-        val tokensPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0))
+        val tokensPanel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0))
         val domainCombo = JComboBox<String>()
         domainCombo.preferredSize = JBUI.size(JBUI.scale(165), domainCombo.preferredSize.height)
         domainCombo.maximumSize = JBUI.size(JBUI.scale(165), domainCombo.preferredSize.height)
@@ -73,7 +72,13 @@ class ToolWindowUiBuilder {
         }
         val outputCopyButton = JButton(AllIcons.Actions.Copy).apply { toolTipText = "SQL 복사" }
         val outputLabel = JBLabel()
-        val clearColumnsButton = JButton(AllIcons.Actions.GC).apply { toolTipText = "Clear Stage" }
+        val clearColumnsButton = JButton(AllIcons.Actions.GC).apply {
+            toolTipText = "Stage 전체 비우기"
+            isFocusable = false
+            isContentAreaFilled = false
+            border = JBUI.Borders.empty(2)
+            preferredSize = JBUI.size(20, 20)
+        }
 
         val renderer = SearchItemRenderer()
         resultList.cellRenderer = renderer
@@ -125,32 +130,30 @@ class ToolWindowUiBuilder {
                     minimumSize = JBUI.size(iconColumnWidth, minimumSize.height)
                     maximumSize = JBUI.size(iconColumnWidth, maximumSize.height)
                 }
+                val buttonPanel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
+                    add(addColumnButton)
+                    add(builderClearButton)
+                }
+                val inlinePanel = object : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)) {
+                    override fun doLayout() {
+                        val requiredWidth = domainCombo.preferredSize.width + buttonPanel.preferredSize.width + JBUI.scale(8)
+                        buttonPanel.isVisible = width >= requiredWidth
+                        super.doLayout()
+                    }
+                }.apply {
+                    add(domainCombo)
+                    add(buttonPanel)
+                }
                 val contentPanel = JPanel(BorderLayout()).apply {
                     border = JBUI.Borders.empty(0, iconContentGap, 0, 0)
-                    add(domainCombo, BorderLayout.WEST)
+                    add(inlinePanel, BorderLayout.WEST)
                 }
                 border = JBUI.Borders.empty(0, leftInset, 0, 0)
                 add(iconPanel, BorderLayout.WEST)
                 add(contentPanel, BorderLayout.CENTER)
             }
-            val row4 = JPanel(BorderLayout()).apply {
-                val spacer = Box.createHorizontalStrut(iconColumnWidth)
-                val contentPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-                    add(builderClearButton)
-                    add(Box.createHorizontalStrut(JBUI.scale(8)))
-                    add(addColumnButton)
-                }
-                border = JBUI.Borders.empty(0, leftInset, 0, 0)
-                val contentWithGap = JPanel(BorderLayout()).apply {
-                    border = JBUI.Borders.empty(0, iconContentGap, 0, 0)
-                    add(contentPanel, BorderLayout.CENTER)
-                }
-                add(spacer, BorderLayout.WEST)
-                add(contentWithGap, BorderLayout.CENTER)
-            }
             add(row2)
             add(row3)
-            add(row4)
         }
         val builderPanel = JPanel(BorderLayout()).apply {
             val tokensRow = JPanel(BorderLayout()).apply {
@@ -173,9 +176,16 @@ class ToolWindowUiBuilder {
             add(builderControls, BorderLayout.CENTER)
         }
         val columnsPanel = JPanel(BorderLayout()).apply {
-            val header = JPanel(BorderLayout()).apply {
-                add(JBLabel("Stage"), BorderLayout.WEST)
-                add(clearColumnsButton, BorderLayout.EAST)
+            val stageLabel = JBLabel("Stage")
+            val header = object : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(10), 0)) {
+                override fun doLayout() {
+                    val requiredWidth = stageLabel.preferredSize.width + clearColumnsButton.preferredSize.width + JBUI.scale(12)
+                    clearColumnsButton.isVisible = width >= requiredWidth
+                    super.doLayout()
+                }
+            }.apply {
+                add(stageLabel)
+                add(clearColumnsButton)
             }
             val scroll = JBScrollPane(columnsList).apply {
                 preferredSize = Dimension(600, 140)
@@ -188,7 +198,13 @@ class ToolWindowUiBuilder {
             add(columnsPanel, BorderLayout.CENTER)
         }
         val outputPanel = JPanel(BorderLayout()).apply {
-            val header = JPanel(BorderLayout()).apply {
+            val header = object : JPanel(BorderLayout()) {
+                override fun doLayout() {
+                    val requiredWidth = outputLabel.preferredSize.width + outputCopyButton.preferredSize.width + JBUI.scale(12)
+                    outputCopyButton.isVisible = width >= requiredWidth
+                    super.doLayout()
+                }
+            }.apply {
                 add(outputLabel, BorderLayout.WEST)
                 add(outputCopyButton, BorderLayout.EAST)
             }
