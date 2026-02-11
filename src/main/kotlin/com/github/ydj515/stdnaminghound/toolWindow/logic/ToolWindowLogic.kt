@@ -12,23 +12,42 @@ import com.github.ydj515.stdnaminghound.sql.DbDialect
 import com.github.ydj515.stdnaminghound.sql.SqlFormat
 import com.github.ydj515.stdnaminghound.toolWindow.ColumnEntry
 import com.github.ydj515.stdnaminghound.toolWindow.context.ToolWindowContext
+import com.intellij.icons.AllIcons
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.ui.Messages
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
+import java.awt.Component
 import java.awt.Dimension
+import java.awt.Point
 import java.awt.datatransfer.StringSelection
+import kotlin.math.abs
+import javax.swing.BorderFactory
+import javax.swing.Box
+import javax.swing.BoxLayout
 import javax.swing.DefaultComboBoxModel
-import javax.swing.JPopupMenu
+import javax.swing.JButton
 import javax.swing.JMenuItem
+import javax.swing.JPanel
+import javax.swing.JPopupMenu
+import javax.swing.SwingUtilities
 
 /** ToolWindow의 비즈니스 로직을 담당한다. */
 class ToolWindowLogic(private val context: ToolWindowContext) {
     private val ui = context.ui
     private val project = context.toolWindow.project
+    private val tokenDropIndicator = JPanel().apply {
+        val focusColor = javax.swing.UIManager.getColor("Component.focusColor")
+            ?: javax.swing.UIManager.getColor("Focus.color")
+            ?: DEFAULT_DROP_INDICATOR_COLOR
+        background = focusColor
+        isOpaque = true
+        preferredSize = Dimension(JBUI.scale(2), JBUI.scale(24))
+    }
 
     /** 도메인 콤보박스를 갱신한다. */
     fun refreshDomainCombo(domains: List<Domain>) {
@@ -84,15 +103,101 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
             ui.tokensPanel.add(javax.swing.Box.createRigidArea(Dimension(0, emptyHeight)))
         }
         tokens.forEachIndexed { index, word ->
-            if (index > 0) {
-                ui.tokensPanel.add(javax.swing.Box.createHorizontalStrut(8))
+            val rawLabel = word.abbr ?: word.koName
+            val tokenHeight = ui.addColumnButton.preferredSize.height
+            val chip = JPanel().apply {
+                layout = BoxLayout(this, BoxLayout.X_AXIS)
+                putClientProperty("tokenIndex", index)
+                border = BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(
+                        javax.swing.UIManager.getColor("Component.borderColor") ?: java.awt.Color.GRAY,
+                        1,
+                        true
+                    ),
+                    JBUI.Borders.empty(1, 4, 1, 2)
+                )
+                isOpaque = true
+                background = this@ToolWindowLogic.ui.tokensPanel.background
+                toolTipText = rawLabel
             }
-            val chip = javax.swing.JButton(word.abbr ?: word.koName).apply {
+            val handleLabel = JBLabel(TOKEN_HANDLE_PREFIX).apply {
+                foreground = javax.swing.UIManager.getColor("Label.disabledForeground")
+                    ?: javax.swing.UIManager.getColor("Label.foreground")
+                alignmentY = Component.CENTER_ALIGNMENT
+            }
+            val textLabel = JBLabel(rawLabel).apply {
+                alignmentY = Component.CENTER_ALIGNMENT
+            }
+            val removeButton = JButton(AllIcons.Actions.Close).apply {
+                isFocusable = false
+                isContentAreaFilled = false
+                border = JBUI.Borders.empty()
+                preferredSize = JBUI.size(14, 14)
+                minimumSize = JBUI.size(14, 14)
+                cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+                toolTipText = "제거"
+                alignmentY = Component.CENTER_ALIGNMENT
                 addActionListener {
                     context.builder.removeAt(index)
                     updateBuilderPreview()
                 }
             }
+            chip.add(Box.createHorizontalStrut(JBUI.scale(2)))
+            chip.add(handleLabel)
+            chip.add(Box.createHorizontalStrut(JBUI.scale(2)))
+            chip.add(textLabel)
+            chip.add(Box.createHorizontalStrut(JBUI.scale(2)))
+            chip.add(removeButton)
+            chip.add(Box.createHorizontalStrut(JBUI.scale(1)))
+            val currentPref = chip.preferredSize
+            val chipSize = Dimension(currentPref.width, tokenHeight)
+            chip.preferredSize = chipSize
+            chip.minimumSize = chipSize
+
+            val dragListener = object : java.awt.event.MouseAdapter() {
+                private var pressedPoint: Point? = null
+                private var dragged = false
+                private val dragThreshold = JBUI.scale(4)
+
+                override fun mousePressed(e: java.awt.event.MouseEvent) {
+                    pressedPoint = SwingUtilities.convertPoint(e.component, e.point, ui.tokensPanel)
+                    dragged = false
+                }
+
+                override fun mouseDragged(e: java.awt.event.MouseEvent) {
+                    val press = pressedPoint ?: return
+                    val panelPoint = SwingUtilities.convertPoint(e.component, e.point, ui.tokensPanel)
+                    val moved = abs(panelPoint.x - press.x) >= dragThreshold || abs(panelPoint.y - press.y) >= dragThreshold
+                    if (!moved) return
+                    dragged = true
+                    val insertionIndex = resolveTokenInsertionIndex(panelPoint)
+                    showTokenDropIndicator(insertionIndex)
+                }
+
+                override fun mouseReleased(e: java.awt.event.MouseEvent) {
+                    hideTokenDropIndicator()
+                    val press = pressedPoint ?: return
+                    val panelPoint = SwingUtilities.convertPoint(e.component, e.point, ui.tokensPanel)
+                    val moved = abs(panelPoint.x - press.x) >= dragThreshold || abs(panelPoint.y - press.y) >= dragThreshold
+                    if (moved) {
+                        dragged = true
+                        val insertionIndex = resolveTokenInsertionIndex(panelPoint)
+                        var targetIndex = insertionIndex
+                        if (targetIndex > index) targetIndex -= 1
+                        if (targetIndex != index) {
+                            context.builder.move(index, targetIndex)
+                            updateBuilderPreview()
+                            return
+                        }
+                    }
+                }
+            }
+            chip.addMouseListener(dragListener)
+            chip.addMouseMotionListener(dragListener)
+            handleLabel.addMouseListener(dragListener)
+            handleLabel.addMouseMotionListener(dragListener)
+            textLabel.addMouseListener(dragListener)
+            textLabel.addMouseMotionListener(dragListener)
             ui.tokensPanel.add(chip)
         }
         ui.tokensPanel.revalidate()
@@ -101,6 +206,39 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         ui.addColumnButton.isEnabled = name.isNotBlank()
         ui.builderPreview.revalidate()
         ui.builderPreview.repaint()
+    }
+
+    /** 드롭 포인트를 기준으로 토큰 삽입 인덱스를 계산한다. */
+    private fun resolveTokenInsertionIndex(point: Point): Int {
+        val tokenChips = ui.tokensPanel.components
+            .filterIsInstance<JPanel>()
+            .filter { it.getClientProperty("tokenIndex") is Int }
+        if (tokenChips.isEmpty()) return 0
+        val ordered = tokenChips.sortedBy { it.x }
+        ordered.forEachIndexed { idx, chip ->
+            val centerX = chip.x + (chip.width / 2)
+            if (point.x < centerX) return idx
+        }
+        return ordered.size
+    }
+
+    /** 드래그 중 토큰 삽입 위치 인디케이터를 표시한다. */
+    private fun showTokenDropIndicator(insertionIndex: Int) {
+        ui.tokensPanel.remove(tokenDropIndicator)
+        val count = ui.tokensPanel.componentCount
+        val safeIndex = insertionIndex.coerceIn(0, count)
+        ui.tokensPanel.add(tokenDropIndicator, safeIndex)
+        ui.tokensPanel.revalidate()
+        ui.tokensPanel.repaint()
+    }
+
+    /** 드래그 종료 시 토큰 삽입 위치 인디케이터를 제거한다. */
+    private fun hideTokenDropIndicator() {
+        if (tokenDropIndicator.parent == ui.tokensPanel) {
+            ui.tokensPanel.remove(tokenDropIndicator)
+            ui.tokensPanel.revalidate()
+            ui.tokensPanel.repaint()
+        }
     }
 
     /** 선택 상태에 따라 컨텍스트 메뉴 활성화를 갱신한다. */
@@ -370,6 +508,9 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
     }
 
     companion object {
+        private const val TOKEN_HANDLE_PREFIX = "\u2261"
+        private val DEFAULT_DROP_INDICATOR_COLOR = java.awt.Color(0x4A90E2)
+
         /** 도메인이 없을 때 사용하는 기본 도메인이다. */
         private val DEFAULT_DOMAIN = Domain(
             name = "기본V255",

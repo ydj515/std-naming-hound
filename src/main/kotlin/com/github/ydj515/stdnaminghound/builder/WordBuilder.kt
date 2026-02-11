@@ -33,6 +33,14 @@ class WordBuilder {
         }
     }
 
+    /** 단어의 순서를 변경한다. */
+    fun move(fromIndex: Int, toIndex: Int) {
+        if (fromIndex !in tokens.indices || toIndex !in tokens.indices) return
+        if (fromIndex == toIndex) return
+        val item = tokens.removeAt(fromIndex)
+        tokens.add(toIndex, item)
+    }
+
     /** 누적된 단어를 모두 비운다. */
     fun clear() {
         tokens.clear()
