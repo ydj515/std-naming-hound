@@ -31,9 +31,7 @@ import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JButton
-import javax.swing.JMenuItem
 import javax.swing.JPanel
-import javax.swing.JPopupMenu
 import javax.swing.SwingUtilities
 
 /** ToolWindow의 비즈니스 로직을 담당한다. */
@@ -73,6 +71,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         }
         if (allowedTypes.isEmpty()) {
             ui.listModel.clear()
+            updateTermFallbackHint(query, allowedTypes)
             return
         }
         val results = context.searchEngine.search(query, 50, allowedTypes)
@@ -80,6 +79,27 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         results.forEach { ui.listModel.addElement(it) }
         if (results.isNotEmpty()) {
             ui.resultList.selectedIndex = 0
+        }
+        updateTermFallbackHint(query, allowedTypes)
+    }
+
+    /** TERM 검색 결과가 없고 WORD 조합이 가능할 때 안내 힌트를 표시한다. */
+    private fun updateTermFallbackHint(query: String, allowedTypes: Set<SearchItemType>) {
+        val normalizedQuery = query.trim()
+        val canShowHint = normalizedQuery.isNotBlank() &&
+            SearchItemType.TERM in allowedTypes &&
+            SearchItemType.WORD in allowedTypes
+        val visible = if (canShowHint) {
+            val hasTerm = context.searchEngine.search(normalizedQuery, 1, setOf(SearchItemType.TERM)).isNotEmpty()
+            val hasWord = context.searchEngine.search(normalizedQuery, 1, setOf(SearchItemType.WORD)).isNotEmpty()
+            !hasTerm && hasWord
+        } else {
+            false
+        }
+        if (ui.termFallbackHint.isVisible != visible) {
+            ui.termFallbackHint.isVisible = visible
+            ui.topPanel.revalidate()
+            ui.topPanel.repaint()
         }
     }
 
@@ -248,13 +268,13 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         }
     }
 
-    /** 선택 상태에 따라 컨텍스트 메뉴 활성화를 갱신한다. */
-    fun updateActionButtons(addBuilderMenuItem: JMenuItem?) {
-        val item = ui.resultList.selectedValue
-        val canAdd = ui.builderModeCheck.isSelected &&
-                (item?.type == SearchItemType.WORD || item?.type == SearchItemType.TERM)
-        addBuilderMenuItem?.isEnabled = canAdd
+    /** 검색 항목을 Builder에 추가할 수 있는지 판단한다. */
+    fun canAddToBuilder(item: SearchItem): Boolean {
+        return item.type == SearchItemType.WORD || item.type == SearchItemType.TERM
     }
+
+    /** 검색 항목에서 컬럼 SQL을 생성할 수 있는지 판단한다. */
+    fun canCopySqlColumn(item: SearchItem): Boolean = item.type == SearchItemType.TERM
 
     /** 텍스트를 클립보드에 복사한다. */
     fun copyText(text: String) {
@@ -284,6 +304,26 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
             SearchItemType.WORD -> item.abbr ?: item.primaryEn ?: item.titleKo
             SearchItemType.DOMAIN -> item.titleKo
         }
+    }
+
+    /** TERM 항목을 컬럼 정의 SQL로 변환한다. */
+    fun buildColumnSqlForTerm(item: SearchItem): String? {
+        if (item.type != SearchItemType.TERM) return null
+        val termRef = item.payloadRef as? TermRef ?: return null
+        val term = context.datasetRepository.getDataset().terms.getOrNull(termRef.index) ?: return null
+        val columnName = term.abbr?.takeIf { it.isNotBlank() }
+            ?: item.primaryEn?.takeIf { it.isNotBlank() }
+            ?: item.titleKo
+        val domain = findDomainByName(term.domainName) ?: defaultDomain()
+        val dialect = DbDialect.fromName(context.settings.state.dbDialect)
+        val result = context.sqlGenerator.generateColumnSql(
+            columnName = columnName,
+            domain = domain,
+            description = term.description ?: term.koName,
+            dialect = dialect,
+            format = SqlFormat.COLUMN_DEFINITION,
+        )
+        return result.sql.trim().ifBlank { null }
     }
 
     /** 선택 항목을 Builder에 추가한다. */
@@ -468,33 +508,6 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
             .getNotificationGroup("StdNamingHound")
             .createNotification("${text} 복사됨", NotificationType.INFORMATION)
             .notify(project)
-    }
-
-    /** 팝업 메뉴에 테마 색을 적용한다. */
-    fun applyPopupTheme(popup: JPopupMenu) {
-        val bg = javax.swing.UIManager.getColor("PopupMenu.background")
-            ?: javax.swing.UIManager.getColor("Menu.background")
-        val fg = javax.swing.UIManager.getColor("PopupMenu.foreground")
-            ?: javax.swing.UIManager.getColor("Menu.foreground")
-        if (bg != null) {
-            popup.background = bg
-            popup.isOpaque = true
-        }
-        if (fg != null) {
-            popup.foreground = fg
-        }
-        for (i in 0 until popup.componentCount) {
-            val comp = popup.getComponent(i)
-            if (comp is JMenuItem) {
-                if (bg != null) {
-                    comp.background = bg
-                    comp.isOpaque = true
-                }
-                if (fg != null) {
-                    comp.foreground = fg
-                }
-            }
-        }
     }
 
     /** 기본 도메인을 반환한다. */

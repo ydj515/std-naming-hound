@@ -14,6 +14,7 @@ import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -35,6 +36,12 @@ class ToolWindowUiBuilder {
         val searchField = SearchTextField()
         val listModel = DefaultListModel<SearchItem>()
         val resultList = JBList(listModel)
+        val termFallbackHint = JBLabel("표준 용어(TERM)가 없습니다. 표준 단어(WORD)를 조합해 생성하세요.").apply {
+            icon = AllIcons.General.ContextHelp
+            foreground = UIUtil.getContextHelpForeground()
+            border = JBUI.Borders.empty(JBUI.scale(4), JBUI.scale(12), JBUI.scale(4), 0)
+            isVisible = false
+        }
         val termFilterCheck = JCheckBox("용어", true)
         val wordFilterCheck = JCheckBox("단어", true)
         val builderModeCheck = JCheckBox("Builder")
@@ -98,6 +105,10 @@ class ToolWindowUiBuilder {
         val topBar = JPanel(BorderLayout()).apply {
             add(searchField, BorderLayout.CENTER)
             add(buttonBar, BorderLayout.EAST)
+        }
+        val searchHeader = JPanel(BorderLayout()).apply {
+            add(topBar, BorderLayout.NORTH)
+            add(termFallbackHint, BorderLayout.SOUTH)
         }
         val center = JBScrollPane(resultList)
         val leftInset = JBUI.scale(12)
@@ -212,7 +223,7 @@ class ToolWindowUiBuilder {
             add(outputArea, BorderLayout.CENTER)
         }
         val topPanel = JPanel(BorderLayout()).apply {
-            add(topBar, BorderLayout.NORTH)
+            add(searchHeader, BorderLayout.NORTH)
             add(center, BorderLayout.CENTER)
         }
         val lowerSplit = JSplitPane(JSplitPane.VERTICAL_SPLIT, stagingPanel, outputPanel).apply {
@@ -240,6 +251,7 @@ class ToolWindowUiBuilder {
             searchField = searchField,
             listModel = listModel,
             resultList = resultList,
+            termFallbackHint = termFallbackHint,
             termFilterCheck = termFilterCheck,
             wordFilterCheck = wordFilterCheck,
             builderModeCheck = builderModeCheck,

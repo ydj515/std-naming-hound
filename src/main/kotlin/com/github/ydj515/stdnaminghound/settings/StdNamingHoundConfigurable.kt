@@ -55,6 +55,10 @@ class StdNamingHoundConfigurable : Configurable {
         private const val EXPORT_MESSAGE_MERGED = "The merged dataset has been saved as a ZIP file."
         private const val EXPORT_MESSAGE_BASE = "The base dataset has been saved as a ZIP file."
         private const val EXPORT_FAILED_MESSAGE_PREFIX = "Failed to save ZIP: "
+        private const val DATASET_LICENSE = "이용허락범위 제한 없음"
+        private const val TERMS_URL = "https://www.data.go.kr/data/15156379/fileData.do"
+        private const val WORDS_URL = "https://www.data.go.kr/data/15156439/fileData.do"
+        private const val DOMAINS_URL = "https://www.data.go.kr/data/15156442/fileData.do"
     }
 
     private val settings: StdNamingHoundSettings = ApplicationManager.getApplication().service()
@@ -67,6 +71,9 @@ class StdNamingHoundConfigurable : Configurable {
     private val useCustomOnlyCheck = JBCheckBox("Use only custom data")
     private val datasetInfoLabel = JBLabel()
     private val datasetInfoHelp = JBLabel(com.intellij.icons.AllIcons.General.ContextHelp)
+    private val datasetAboutLabel = JBLabel().apply {
+        foreground = UIUtil.getContextHelpForeground()
+    }
     private val dbDialectCombo = JComboBox(arrayOf("Postgres", "Oracle", "MySQL")).apply {
         minimumSize = java.awt.Dimension(220, minimumSize.height)
     }
@@ -148,6 +155,11 @@ class StdNamingHoundConfigurable : Configurable {
                         scroll.preferredSize = java.awt.Dimension(475, 240)
                         cell(scroll)
                     }
+                }
+                group("About") {
+                    row {
+                        cell(datasetAboutLabel).align(AlignX.FILL)
+                    }.layout(RowLayout.PARENT_GRID)
                 }
             }
             root?.add(content, BorderLayout.CENTER)
@@ -263,6 +275,31 @@ class StdNamingHoundConfigurable : Configurable {
         val indexSize = searchIndexRepository.getIndex().entries.size
         datasetInfoHelp.toolTipText =
             "terms: ${dataset.terms.size}, words: ${dataset.words.size}, domain: ${dataset.domains.size}, index: $indexSize"
+        datasetAboutLabel.text = buildDatasetAboutText(meta)
+    }
+
+    /** 내장 데이터셋의 출처와 이용허락 정보를 HTML 라벨로 구성한다. */
+    private fun buildDatasetAboutText(meta: com.github.ydj515.stdnaminghound.model.DatasetMeta?): String {
+        val source = escapeHtml(meta?.source?.takeIf { it.isNotBlank() } ?: "행정안전부 공공데이터 공통표준")
+        val generatedAt = escapeHtml(meta?.generatedAt?.takeIf { it.isNotBlank() } ?: "unknown")
+        return "<html>" +
+                "Built-in dataset source: $source<br/>" +
+                "Provider: 행정안전부 / 공공데이터포털<br/>" +
+                "License: $DATASET_LICENSE<br/>" +
+                "Official data: <a href=\"$TERMS_URL\">terms</a>, " +
+                "<a href=\"$WORDS_URL\">words</a>, " +
+                "<a href=\"$DOMAINS_URL\">domains</a><br/>" +
+                "Generated at: $generatedAt" +
+                "</html>"
+    }
+
+    /** HTML 라벨에 넣을 텍스트를 이스케이프한다. */
+    private fun escapeHtml(text: String): String {
+        return text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
     }
 
     /** 샘플 JSON을 저장할 위치를 선택받아 저장한다. */

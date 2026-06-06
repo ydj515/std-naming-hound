@@ -20,6 +20,7 @@ class ToolWindowUi(
     val searchField: SearchTextField,
     val listModel: DefaultListModel<SearchItem>,
     val resultList: JBList<SearchItem>,
+    val termFallbackHint: JBLabel,
     val termFilterCheck: JCheckBox,
     val wordFilterCheck: JCheckBox,
     val builderModeCheck: JCheckBox,

@@ -9,6 +9,11 @@ import com.github.ydj515.stdnaminghound.toolWindow.logic.ToolWindowLogic
 import com.github.ydj515.stdnaminghound.toolWindow.ui.drag.ColumnReorderTransferHandler
 import com.github.ydj515.stdnaminghound.toolWindow.util.containsName
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.ui.Messages
@@ -16,8 +21,6 @@ import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.ui.components.labels.LinkListener
 import java.awt.Toolkit
 import java.awt.event.KeyEvent
-import javax.swing.JMenuItem
-import javax.swing.JPopupMenu
 import javax.swing.JComponent
 
 /** UI 이벤트를 로직으로 연결한다. */
@@ -26,7 +29,6 @@ class ToolWindowEventBinder(
     private val context: ToolWindowContext,
 ) {
     private val ui = context.ui
-    private var addBuilderMenuItem: JMenuItem? = null
 
     /** UI 컴포넌트에 리스너를 바인딩한다. */
     fun bind() {
@@ -38,24 +40,30 @@ class ToolWindowEventBinder(
             logic.scheduleOutputRefresh()
         }
 
-        val columnsPopup = JPopupMenu().apply {
-            val removeItem = JMenuItem("컬럼 삭제", AllIcons.Actions.DeleteTag)
-            add(removeItem)
-            removeItem.addActionListener {
-                val index = columnsList.selectedIndex
-                if (index < 0) return@addActionListener
-                val entry = columnsModel.getElementAt(index)
-                val result = Messages.showYesNoDialog(
-                    context.toolWindow.project,
-                    "${entry.name} 컬럼을 삭제하시겠습니까?",
-                    "컬럼 삭제",
-                    null
-                )
-                if (result == Messages.YES) {
-                    columnsModel.remove(index)
-                    logic.scheduleOutputRefresh()
+        val columnsPopupGroup = DefaultActionGroup().apply {
+            add(object : DumbAwareAction("컬럼 삭제", null, AllIcons.Actions.DeleteTag) {
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+                override fun update(e: AnActionEvent) {
+                    e.presentation.isEnabled = columnsList.selectedIndex >= 0
                 }
-            }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    val index = columnsList.selectedIndex
+                    if (index < 0) return
+                    val entry = columnsModel.getElementAt(index)
+                    val result = Messages.showYesNoDialog(
+                        context.toolWindow.project,
+                        "${entry.name} 컬럼을 삭제하시겠습니까?",
+                        "컬럼 삭제",
+                        null
+                    )
+                    if (result == Messages.YES) {
+                        columnsModel.remove(index)
+                        logic.scheduleOutputRefresh()
+                    }
+                }
+            })
         }
         columnsList.addMouseListener(object : java.awt.event.MouseAdapter() {
             override fun mousePressed(e: java.awt.event.MouseEvent) {
@@ -70,9 +78,13 @@ class ToolWindowEventBinder(
                 val index = columnsList.locationToIndex(e.point)
                 if (index >= 0) {
                     columnsList.selectedIndex = index
-                    logic.applyPopupTheme(columnsPopup)
-                    columnsPopup.updateUI()
-                    columnsPopup.show(columnsList, e.x, e.y)
+                    showActionPopup(
+                        place = "StdNamingHound.ColumnsPopup",
+                        group = columnsPopupGroup,
+                        invoker = columnsList,
+                        x = e.x,
+                        y = e.y,
+                    )
                 }
             }
         })
@@ -99,37 +111,66 @@ class ToolWindowEventBinder(
             override fun contentsChanged(e: javax.swing.event.ListDataEvent?) = logic.scheduleOutputRefresh()
         })
 
-        ui.resultList.addListSelectionListener {
-            ui.resultList.selectedValue ?: return@addListSelectionListener
-            logic.updateActionButtons(addBuilderMenuItem)
-        }
-
         ui.builderModeCheck.addActionListener {
             logic.updateResults(ui.searchField.text)
-            logic.updateActionButtons(addBuilderMenuItem)
         }
         ui.termFilterCheck.addActionListener { logic.updateResults(ui.searchField.text) }
         ui.wordFilterCheck.addActionListener { logic.updateResults(ui.searchField.text) }
 
-        val popupMenu = JPopupMenu().apply {
-            addBuilderMenuItem = JMenuItem("Add to Builder", AllIcons.General.Add)
-            val insertItem = JMenuItem("Insert Name", AllIcons.Actions.Edit)
-            val copyItem = JMenuItem("Copy Name", AllIcons.Actions.Copy)
-            add(addBuilderMenuItem)
-            add(insertItem)
-            add(copyItem)
-            copyItem.addActionListener {
-                val item = resultList.selectedValue ?: return@addActionListener
-                logic.copyText(logic.resolveSelectedText(item))
-            }
-            insertItem.addActionListener {
-                val item = resultList.selectedValue ?: return@addActionListener
-                logic.insertText(logic.resolveSelectedText(item))
-            }
-            addBuilderMenuItem?.addActionListener {
-                val item = resultList.selectedValue ?: return@addActionListener
-                logic.addSelectedItemToBuilder(item)
-            }
+        val resultPopupGroup = DefaultActionGroup().apply {
+            add(object : DumbAwareAction("Add to Builder", null, AllIcons.General.Add) {
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+                override fun update(e: AnActionEvent) {
+                    val item = resultList.selectedValue
+                    e.presentation.isEnabled = ui.builderModeCheck.isSelected &&
+                        item != null &&
+                        logic.canAddToBuilder(item)
+                }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    val item = resultList.selectedValue ?: return
+                    logic.addSelectedItemToBuilder(item)
+                }
+            })
+            add(object : DumbAwareAction("Insert Name", null, AllIcons.Actions.Edit) {
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+                override fun update(e: AnActionEvent) {
+                    e.presentation.isEnabled = resultList.selectedValue != null
+                }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    val item = resultList.selectedValue ?: return
+                    logic.insertText(logic.resolveSelectedText(item))
+                }
+            })
+            add(object : DumbAwareAction("Copy Name", null, AllIcons.Actions.Copy) {
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+                override fun update(e: AnActionEvent) {
+                    e.presentation.isEnabled = resultList.selectedValue != null
+                }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    val item = resultList.selectedValue ?: return
+                    logic.copyText(logic.resolveSelectedText(item))
+                }
+            })
+            add(object : DumbAwareAction("Copy SQL Column", null, AllIcons.Actions.Copy) {
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+                override fun update(e: AnActionEvent) {
+                    e.presentation.isEnabled = resultList.selectedValue?.let(logic::canCopySqlColumn) == true
+                }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    val item = resultList.selectedValue ?: return
+                    val sql = logic.buildColumnSqlForTerm(item) ?: return
+                    logic.copyText(sql)
+                    logic.showCopiedToast("SQL Column")
+                }
+            })
         }
 
         resultList.addMouseListener(object : java.awt.event.MouseAdapter() {
@@ -156,10 +197,13 @@ class ToolWindowEventBinder(
                 val index = resultList.locationToIndex(e.point)
                 if (index >= 0) {
                     resultList.selectedIndex = index
-                    logic.updateActionButtons(addBuilderMenuItem)
-                    logic.applyPopupTheme(popupMenu)
-                    popupMenu.updateUI()
-                    popupMenu.show(resultList, e.x, e.y)
+                    showActionPopup(
+                        place = "StdNamingHound.ResultPopup",
+                        group = resultPopupGroup,
+                        invoker = resultList,
+                        x = e.x,
+                        y = e.y,
+                    )
                 }
             }
         })
@@ -169,7 +213,6 @@ class ToolWindowEventBinder(
                 val index = ui.resultList.locationToIndex(e.point)
                 if (index >= 0 && index != ui.resultList.selectedIndex) {
                     ui.resultList.selectedIndex = index
-                    logic.updateActionButtons(addBuilderMenuItem)
                 }
                 if (ui.renderer.hoverIndex != index) {
                     ui.renderer.hoverIndex = index
@@ -285,7 +328,20 @@ class ToolWindowEventBinder(
         }.getOrDefault(WordBuilder.CaseStyle.SNAKE_UPPER)
         context.builder.setCaseStyle(context.currentCaseStyle)
         logic.updateBuilderPreview()
-        logic.updateActionButtons(addBuilderMenuItem)
         logic.updateOutputPreview()
+    }
+
+    /** IntelliJ Action System 팝업을 표시해 IDE 기본 메뉴 hover/테마 스타일을 사용한다. */
+    private fun showActionPopup(
+        place: String,
+        group: DefaultActionGroup,
+        invoker: JComponent,
+        x: Int,
+        y: Int,
+    ) {
+        ActionManager.getInstance()
+            .createActionPopupMenu(place, group)
+            .component
+            .show(invoker, x, y)
     }
 }

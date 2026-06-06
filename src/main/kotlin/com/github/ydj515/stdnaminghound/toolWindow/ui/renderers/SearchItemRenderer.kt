@@ -2,9 +2,11 @@ package com.github.ydj515.stdnaminghound.toolWindow.ui.renderers
 
 import com.github.ydj515.stdnaminghound.model.SearchItem
 import com.github.ydj515.stdnaminghound.model.SearchItemType
+import com.intellij.icons.AllIcons
 import com.intellij.ui.JBColor
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBPanel
+import com.intellij.ui.components.JBLabel
 import java.awt.BorderLayout
 import javax.swing.JList
 import javax.swing.ListCellRenderer
@@ -13,8 +15,12 @@ import javax.swing.BorderFactory
 /** 검색 결과 리스트의 렌더링을 담당한다. */
 class SearchItemRenderer : ListCellRenderer<SearchItem> {
     private val panel = JBPanel<JBPanel<*>>(BorderLayout())
+    private val titleRow = JBPanel<JBPanel<*>>(BorderLayout())
     private val title = SimpleColoredComponent()
     private val sub = SimpleColoredComponent()
+    private val builderIndicator = JBLabel(AllIcons.General.Add).apply {
+        toolTipText = "Builder로 추가 가능"
+    }
     var hoverIndex: Int = -1
 
     /** 리스트 셀 UI를 구성해 반환한다. */
@@ -66,8 +72,14 @@ class SearchItemRenderer : ListCellRenderer<SearchItem> {
             else -> list.background
         }
         panel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        titleRow.background = panel.background
+        titleRow.removeAll()
+        titleRow.add(title, BorderLayout.CENTER)
+        if (value.type == SearchItemType.WORD) {
+            titleRow.add(builderIndicator, BorderLayout.EAST)
+        }
         panel.removeAll()
-        panel.add(title, BorderLayout.NORTH)
+        panel.add(titleRow, BorderLayout.NORTH)
         panel.add(sub, BorderLayout.SOUTH)
         return panel
     }
