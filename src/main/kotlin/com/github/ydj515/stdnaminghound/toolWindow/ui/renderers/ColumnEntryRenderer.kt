@@ -5,12 +5,12 @@ import java.awt.BorderLayout
 import javax.swing.JList
 import javax.swing.ListCellRenderer
 import com.intellij.ui.components.JBLabel
-import javax.swing.BorderFactory
-import javax.swing.JPanel
+import com.intellij.ui.components.JBPanel
+import com.intellij.util.ui.JBUI
 
 /** 컬럼 누적 목록의 렌더링을 담당한다. */
 class ColumnEntryRenderer : ListCellRenderer<ColumnEntry> {
-    private val panel = JPanel(BorderLayout())
+    private val panel = JBPanel<JBPanel<*>>(BorderLayout())
     private val handleLabel = JBLabel("\u2261")
     private val textLabel = JBLabel()
 
@@ -34,12 +34,12 @@ class ColumnEntryRenderer : ListCellRenderer<ColumnEntry> {
         textLabel.foreground = fg
         textLabel.background = bg
         textLabel.isOpaque = true
-        textLabel.border = BorderFactory.createEmptyBorder(4, 4, 4, 8)
+        textLabel.border = JBUI.Borders.empty(4, 4, 4, 8)
 
         handleLabel.foreground = fg
         handleLabel.background = bg
         handleLabel.isOpaque = true
-        handleLabel.border = BorderFactory.createEmptyBorder(4, 8, 4, 2)
+        handleLabel.border = JBUI.Borders.empty(4, 8, 4, 2)
 
         panel.background = bg
         panel.isOpaque = true

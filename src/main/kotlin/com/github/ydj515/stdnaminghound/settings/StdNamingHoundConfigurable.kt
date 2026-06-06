@@ -10,6 +10,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
@@ -33,7 +34,7 @@ import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.io.FileOutputStream
 import javax.swing.Box
-import javax.swing.JComboBox
+import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -74,33 +75,36 @@ class StdNamingHoundConfigurable : Configurable {
     private val datasetAboutLabel = JBLabel().apply {
         foreground = UIUtil.getContextHelpForeground()
     }
-    private val dbDialectCombo = JComboBox(arrayOf("Postgres", "Oracle", "MySQL")).apply {
-        minimumSize = java.awt.Dimension(220, minimumSize.height)
+    private val dbDialectCombo = ComboBox(arrayOf("Postgres", "Oracle", "MySQL")).apply {
+        minimumSize = JBUI.size(220, minimumSize.height)
     }
-    private val caseStyleCombo = JComboBox(WordBuilder.CaseStyle.entries.toTypedArray()).apply {
-        minimumSize = java.awt.Dimension(220, minimumSize.height)
+    private val caseStyleCombo = ComboBox(WordBuilder.CaseStyle.entries.toTypedArray()).apply {
+        minimumSize = JBUI.size(220, minimumSize.height)
     }
-    private val mergePolicyCombo = JComboBox(MergePolicy.entries.toTypedArray()).apply {
-        minimumSize = java.awt.Dimension(220, minimumSize.height)
-        preferredSize = java.awt.Dimension(220, preferredSize.height)
+    private val mergePolicyCombo = ComboBox(MergePolicy.entries.toTypedArray()).apply {
+        minimumSize = JBUI.size(220, minimumSize.height)
+        preferredSize = JBUI.size(220, preferredSize.height)
     }
     private val customJsonArea = JBTextArea().apply {
         lineWrap = true
         wrapStyleWord = true
         isEditable = false
     }
-    private val loadFileButton = javax.swing.JButton("Import JSON")
-    private val resetButton = javax.swing.JButton("Reset")
-    private val exportBaseDataButton = javax.swing.JButton("Export Base Data")
-    private val downloadSampleLink = LinkLabel.create("Sample download here", null).apply {
+    private val loadFileButton = JButton("Import JSON")
+    private val resetButton = JButton("Reset")
+    private val exportBaseDataButton = JButton("Export Base Data")
+    private val downloadSampleLink = LinkLabel<Any?>().apply {
+        text = "Sample download here"
         border = JBUI.Borders.empty(0, 0, JBUI.scale(10), 0)
     }
 
     /** 설정 UI 컴포넌트를 생성한다. */
     override fun createComponent(): JComponent {
         if (root == null) {
-            root = JPanel(BorderLayout())
-            val buttonsPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+            root = com.intellij.ui.components.JBPanel<com.intellij.ui.components.JBPanel<*>>(BorderLayout())
+            val buttonsPanel = com.intellij.ui.components.JBPanel<com.intellij.ui.components.JBPanel<*>>(
+                FlowLayout(FlowLayout.LEFT, 0, 0)
+            ).apply {
                 border = JBUI.Borders.empty(JBUI.scale(6), 0, JBUI.scale(6), 0)
                 add(loadFileButton)
                 add(Box.createHorizontalStrut(JBUI.scale(8)))
@@ -152,7 +156,7 @@ class StdNamingHoundConfigurable : Configurable {
                     }.layout(RowLayout.PARENT_GRID)
                     row("Preview") {
                         val scroll = JBScrollPane(customJsonArea)
-                        scroll.preferredSize = java.awt.Dimension(475, 240)
+                        scroll.preferredSize = JBUI.size(475, 240)
                         cell(scroll)
                     }
                 }
@@ -335,7 +339,7 @@ class StdNamingHoundConfigurable : Configurable {
         val wrapper = dialog.save(null as java.nio.file.Path?, BASE_DATA_ZIP_FILENAME) ?: return
         try {
             val virtualFile = wrapper.virtualFile
-            val targetFile = wrapper.file?.toPath()?.toFile()
+            val targetFile = wrapper.file.toPath().toFile()
             when {
                 virtualFile != null -> {
                     ApplicationManager.getApplication().runWriteAction {

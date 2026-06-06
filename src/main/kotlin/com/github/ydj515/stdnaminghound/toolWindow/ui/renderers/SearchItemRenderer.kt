@@ -3,14 +3,14 @@ package com.github.ydj515.stdnaminghound.toolWindow.ui.renderers
 import com.github.ydj515.stdnaminghound.model.SearchItem
 import com.github.ydj515.stdnaminghound.model.SearchItemType
 import com.intellij.icons.AllIcons
-import com.intellij.ui.JBColor
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import javax.swing.JList
 import javax.swing.ListCellRenderer
-import javax.swing.BorderFactory
 
 /** 검색 결과 리스트의 렌더링을 담당한다. */
 class SearchItemRenderer : ListCellRenderer<SearchItem> {
@@ -66,13 +66,15 @@ class SearchItemRenderer : ListCellRenderer<SearchItem> {
             else -> list.foreground
         }
         title.foreground = fg
-        sub.foreground = if (isSelected || hover) fg else JBColor.GRAY
+        sub.foreground = if (isSelected || hover) fg else UIUtil.getContextHelpForeground()
         panel.background = when {
             isSelected || hover -> list.selectionBackground
             else -> list.background
         }
-        panel.border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        panel.border = JBUI.Borders.empty(10)
+        panel.isOpaque = true
         titleRow.background = panel.background
+        titleRow.isOpaque = true
         titleRow.removeAll()
         titleRow.add(title, BorderLayout.CENTER)
         if (value.type == SearchItemType.WORD) {
