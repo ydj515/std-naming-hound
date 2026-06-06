@@ -1,6 +1,5 @@
 package com.github.ydj515.stdnaminghound.toolWindow.handlers
 
-import com.github.ydj515.stdnaminghound.settings.StdNamingHoundConfigurable
 import com.github.ydj515.stdnaminghound.settings.StdNamingHoundSettings
 import com.github.ydj515.stdnaminghound.settings.StdNamingHoundSettingsListener
 import com.github.ydj515.stdnaminghound.builder.WordBuilder
@@ -15,7 +14,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.ui.components.labels.LinkListener
@@ -287,10 +285,6 @@ class ToolWindowEventBinder(
             if (text.isNotBlank()) {
                 logic.showCopiedToast(text)
             }
-        }
-
-        ui.settingsButton.addActionListener {
-            ShowSettingsUtil.getInstance().showSettingsDialog(context.toolWindow.project, StdNamingHoundConfigurable::class.java)
         }
 
         ui.clearColumnsButton.addActionListener {

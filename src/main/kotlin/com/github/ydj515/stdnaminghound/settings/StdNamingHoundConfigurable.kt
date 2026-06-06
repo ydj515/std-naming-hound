@@ -21,8 +21,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
-import com.intellij.ui.components.labels.LinkLabel
-import com.intellij.ui.components.labels.LinkListener
+import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.RowLayout
@@ -37,6 +36,7 @@ import javax.swing.Box
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.event.HyperlinkEvent
 
 /** 설정 UI를 구성하고 변경 사항을 적용한다. */
 class StdNamingHoundConfigurable : Configurable {
@@ -93,9 +93,13 @@ class StdNamingHoundConfigurable : Configurable {
     private val loadFileButton = JButton("Import JSON")
     private val resetButton = JButton("Reset")
     private val exportBaseDataButton = JButton("Export Base Data")
-    private val downloadSampleLink = LinkLabel<Any?>().apply {
-        text = "Sample download here"
+    private val downloadSampleLink = HyperlinkLabel("Sample download here").apply {
         border = JBUI.Borders.empty(0, 0, JBUI.scale(10), 0)
+        addHyperlinkListener { event ->
+            if (event.eventType == HyperlinkEvent.EventType.ACTIVATED) {
+                downloadSample()
+            }
+        }
     }
 
     /** 설정 UI 컴포넌트를 생성한다. */
@@ -169,10 +173,6 @@ class StdNamingHoundConfigurable : Configurable {
             root?.add(content, BorderLayout.CENTER)
             updateDatasetInfoLabel()
         }
-
-        downloadSampleLink.setListener(LinkListener { _, _ ->
-            downloadSample()
-        }, null)
 
         loadFileButton.addActionListener {
             val descriptor = FileChooserDescriptor(true, false, false, false, false, false)

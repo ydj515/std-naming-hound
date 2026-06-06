@@ -12,7 +12,6 @@ import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.labels.LinkLabel
 import java.awt.Component
 import javax.swing.DefaultListModel
-import javax.swing.JButton
 
 class ToolWindowUi(
     val root: JBPanel<JBPanel<*>>,
@@ -23,17 +22,16 @@ class ToolWindowUi(
     val termFilterCheck: JBCheckBox,
     val wordFilterCheck: JBCheckBox,
     val builderModeCheck: JBCheckBox,
-    val settingsButton: JButton,
     val columnsModel: DefaultListModel<ColumnEntry>,
     val columnsList: JBList<ColumnEntry>,
     val builderPreview: LinkLabel<Any?>,
     val tokensPanel: JBPanel<JBPanel<*>>,
     val domainCombo: ComboBox<String>,
-    val builderClearButton: JButton,
-    val addColumnButton: JButton,
+    val builderClearButton: ToolbarIconButton,
+    val addColumnButton: ToolbarIconButton,
     val outputArea: EditorTextField,
-    val outputCopyButton: JButton,
-    val clearColumnsButton: JButton,
+    val outputCopyButton: ToolbarIconButton,
+    val clearColumnsButton: ToolbarIconButton,
     val outputLabel: JBLabel,
     val columnsPanel: JBPanel<JBPanel<*>>,
     val stagingPanel: JBPanel<JBPanel<*>>,

@@ -1,12 +1,15 @@
 package com.github.ydj515.stdnaminghound.toolWindow.ui
 
 import com.github.ydj515.stdnaminghound.model.SearchItem
+import com.github.ydj515.stdnaminghound.settings.StdNamingHoundConfigurable
 import com.github.ydj515.stdnaminghound.toolWindow.ColumnEntry
 import com.github.ydj515.stdnaminghound.toolWindow.ui.renderers.ColumnEntryRenderer
 import com.github.ydj515.stdnaminghound.toolWindow.ui.renderers.SearchItemRenderer
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.fileTypes.PlainTextFileType
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBCheckBox
@@ -22,8 +25,6 @@ import java.awt.FlowLayout
 import javax.swing.DefaultListModel
 import javax.swing.JSplitPane
 import javax.swing.DropMode
-import javax.swing.JButton
-import com.intellij.openapi.fileTypes.PlainTextFileType
 
 /** ToolWindow UI 컴포넌트를 생성한다. */
 class ToolWindowUiBuilder {
@@ -43,10 +44,10 @@ class ToolWindowUiBuilder {
         val termFilterCheck = JBCheckBox("용어", true)
         val wordFilterCheck = JBCheckBox("단어", true)
         val builderModeCheck = JBCheckBox("Builder")
-        val settingsButton = JButton(AllIcons.General.GearPlain).apply {
-            toolTipText = "open settings"
-            isFocusable = false
-            preferredSize = JBUI.size(28, 28)
+        val settingsButton = ToolbarIconButton(root, "Settings", "설정 열기", AllIcons.General.GearPlain).apply {
+            addActionListener {
+                ShowSettingsUtil.getInstance().showSettingsDialog(project, StdNamingHoundConfigurable::class.java)
+            }
         }
         val columnsModel = DefaultListModel<ColumnEntry>()
         val columnsList = JBList(columnsModel).apply {
@@ -66,31 +67,29 @@ class ToolWindowUiBuilder {
         builderPreview.preferredSize = JBUI.size(180, previewHeight)
         builderPreview.minimumSize = JBUI.size(120, previewHeight)
         builderPreview.maximumSize = java.awt.Dimension(Int.MAX_VALUE, JBUI.scale(previewHeight))
-        val builderClearButton = JButton(AllIcons.Actions.GC).apply { toolTipText = "Clear Builder" }
-        val addColumnButton = JButton(AllIcons.General.Add).apply { toolTipText = "Add Stage" }
+        val builderClearButton = ToolbarIconButton(root, "Clear Builder", "Builder 비우기", AllIcons.Actions.GC)
+        val addColumnButton = ToolbarIconButton(root, "Add Stage", "Stage에 추가", AllIcons.General.Add)
         val outputArea = EditorTextField("", project, PlainTextFileType.INSTANCE).apply {
             isViewer = true
             setOneLineMode(false)
             preferredSize = JBUI.size(600, 160)
         }
-        val outputCopyButton = JButton(AllIcons.Actions.Copy).apply { toolTipText = "SQL 복사" }
+        val outputCopyButton = ToolbarIconButton(root, "Copy SQL", "SQL 복사", AllIcons.Actions.Copy)
         val outputLabel = JBLabel()
-        val clearColumnsButton = JButton(AllIcons.Actions.GC).apply {
-            toolTipText = "Stage 전체 비우기"
-            isFocusable = false
-            preferredSize = JBUI.size(28, 28)
-        }
+        val clearColumnsButton = ToolbarIconButton(root, "Clear Stage", "Stage 전체 비우기", AllIcons.Actions.GC)
 
         val renderer = SearchItemRenderer()
         resultList.cellRenderer = renderer
 
-        val buttonRow = JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0)).apply {
+        val toolbarGap = JBUI.scale(4)
+        val buttonRow = JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, toolbarGap, 0)).apply {
             add(termFilterCheck)
             add(wordFilterCheck)
             add(builderModeCheck)
             add(settingsButton)
         }
         val buttonBar = JBPanel<JBPanel<*>>(java.awt.GridBagLayout()).apply {
+            border = JBUI.Borders.emptyLeft(JBUI.scale(8))
             add(
                 buttonRow,
                 java.awt.GridBagConstraints().apply { anchor = java.awt.GridBagConstraints.CENTER }
@@ -135,11 +134,11 @@ class ToolWindowUiBuilder {
                     minimumSize = JBUI.size(iconColumnWidth, minimumSize.height)
                     maximumSize = JBUI.size(iconColumnWidth, maximumSize.height)
                 }
-                val buttonPanel = JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
+                val buttonPanel = JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, toolbarGap, 0)).apply {
                     add(addColumnButton)
                     add(builderClearButton)
                 }
-                val inlinePanel = object : JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)) {
+                val inlinePanel = object : JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, toolbarGap, 0)) {
                     override fun doLayout() {
                         val requiredWidth = domainCombo.preferredSize.width + buttonPanel.preferredSize.width + JBUI.scale(8)
                         buttonPanel.isVisible = width >= requiredWidth
@@ -182,9 +181,9 @@ class ToolWindowUiBuilder {
         }
         val columnsPanel = JBPanel<JBPanel<*>>(BorderLayout()).apply {
             val stageLabel = JBLabel("Stage")
-            val header = object : JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, JBUI.scale(10), 0)) {
+            val header = object : JBPanel<JBPanel<*>>(FlowLayout(FlowLayout.LEFT, toolbarGap, 0)) {
                 override fun doLayout() {
-                    val requiredWidth = stageLabel.preferredSize.width + clearColumnsButton.preferredSize.width + JBUI.scale(12)
+                    val requiredWidth = stageLabel.preferredSize.width + clearColumnsButton.preferredSize.width + JBUI.scale(8)
                     clearColumnsButton.isVisible = width >= requiredWidth
                     super.doLayout()
                 }
@@ -249,7 +248,6 @@ class ToolWindowUiBuilder {
             termFilterCheck = termFilterCheck,
             wordFilterCheck = wordFilterCheck,
             builderModeCheck = builderModeCheck,
-            settingsButton = settingsButton,
             columnsModel = columnsModel,
             columnsList = columnsList,
             builderPreview = builderPreview,
