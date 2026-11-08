@@ -8,7 +8,7 @@ import org.jetbrains.annotations.PropertyKey
 private const val BUNDLE = "messages.StdNamingHoundBundle"
 
 /** 번들 메시지 조회를 위한 헬퍼 객체다. */
-object StdNamingHoundBundle : DynamicBundle(BUNDLE) {
+object StdNamingHoundBundle : DynamicBundle(StdNamingHoundBundle::class.java, BUNDLE) {
 
     /** 키와 파라미터로 즉시 메시지를 반환한다. */
     @JvmStatic

@@ -10,6 +10,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
@@ -20,8 +21,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
-import com.intellij.ui.components.labels.LinkLabel
-import com.intellij.ui.components.labels.LinkListener
+import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.RowLayout
@@ -33,9 +33,10 @@ import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.io.FileOutputStream
 import javax.swing.Box
-import javax.swing.JComboBox
+import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.event.HyperlinkEvent
 
 /** 설정 UI를 구성하고 변경 사항을 적용한다. */
 class StdNamingHoundConfigurable : Configurable {
@@ -55,6 +56,10 @@ class StdNamingHoundConfigurable : Configurable {
         private const val EXPORT_MESSAGE_MERGED = "The merged dataset has been saved as a ZIP file."
         private const val EXPORT_MESSAGE_BASE = "The base dataset has been saved as a ZIP file."
         private const val EXPORT_FAILED_MESSAGE_PREFIX = "Failed to save ZIP: "
+        private const val DATASET_LICENSE = "이용허락범위 제한 없음"
+        private const val TERMS_URL = "https://www.data.go.kr/data/15156379/fileData.do"
+        private const val WORDS_URL = "https://www.data.go.kr/data/15156439/fileData.do"
+        private const val DOMAINS_URL = "https://www.data.go.kr/data/15156442/fileData.do"
     }
 
     private val settings: StdNamingHoundSettings = ApplicationManager.getApplication().service()
@@ -67,33 +72,43 @@ class StdNamingHoundConfigurable : Configurable {
     private val useCustomOnlyCheck = JBCheckBox("Use only custom data")
     private val datasetInfoLabel = JBLabel()
     private val datasetInfoHelp = JBLabel(com.intellij.icons.AllIcons.General.ContextHelp)
-    private val dbDialectCombo = JComboBox(arrayOf("Postgres", "Oracle", "MySQL")).apply {
-        minimumSize = java.awt.Dimension(220, minimumSize.height)
+    private val datasetAboutLabel = JBLabel().apply {
+        foreground = UIUtil.getContextHelpForeground()
     }
-    private val caseStyleCombo = JComboBox(WordBuilder.CaseStyle.entries.toTypedArray()).apply {
-        minimumSize = java.awt.Dimension(220, minimumSize.height)
+    private val dbDialectCombo = ComboBox(arrayOf("Postgres", "Oracle", "MySQL")).apply {
+        minimumSize = JBUI.size(220, minimumSize.height)
     }
-    private val mergePolicyCombo = JComboBox(MergePolicy.entries.toTypedArray()).apply {
-        minimumSize = java.awt.Dimension(220, minimumSize.height)
-        preferredSize = java.awt.Dimension(220, preferredSize.height)
+    private val caseStyleCombo = ComboBox(WordBuilder.CaseStyle.entries.toTypedArray()).apply {
+        minimumSize = JBUI.size(220, minimumSize.height)
+    }
+    private val mergePolicyCombo = ComboBox(MergePolicy.entries.toTypedArray()).apply {
+        minimumSize = JBUI.size(220, minimumSize.height)
+        preferredSize = JBUI.size(220, preferredSize.height)
     }
     private val customJsonArea = JBTextArea().apply {
         lineWrap = true
         wrapStyleWord = true
         isEditable = false
     }
-    private val loadFileButton = javax.swing.JButton("Import JSON")
-    private val resetButton = javax.swing.JButton("Reset")
-    private val exportBaseDataButton = javax.swing.JButton("Export Base Data")
-    private val downloadSampleLink = LinkLabel.create("Sample download here", null).apply {
+    private val loadFileButton = JButton("Import JSON")
+    private val resetButton = JButton("Reset")
+    private val exportBaseDataButton = JButton("Export Base Data")
+    private val downloadSampleLink = HyperlinkLabel("Sample download here").apply {
         border = JBUI.Borders.empty(0, 0, JBUI.scale(10), 0)
+        addHyperlinkListener { event ->
+            if (event.eventType == HyperlinkEvent.EventType.ACTIVATED) {
+                downloadSample()
+            }
+        }
     }
 
     /** 설정 UI 컴포넌트를 생성한다. */
     override fun createComponent(): JComponent {
         if (root == null) {
-            root = JPanel(BorderLayout())
-            val buttonsPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+            root = com.intellij.ui.components.JBPanel<com.intellij.ui.components.JBPanel<*>>(BorderLayout())
+            val buttonsPanel = com.intellij.ui.components.JBPanel<com.intellij.ui.components.JBPanel<*>>(
+                FlowLayout(FlowLayout.LEFT, 0, 0)
+            ).apply {
                 border = JBUI.Borders.empty(JBUI.scale(6), 0, JBUI.scale(6), 0)
                 add(loadFileButton)
                 add(Box.createHorizontalStrut(JBUI.scale(8)))
@@ -145,18 +160,19 @@ class StdNamingHoundConfigurable : Configurable {
                     }.layout(RowLayout.PARENT_GRID)
                     row("Preview") {
                         val scroll = JBScrollPane(customJsonArea)
-                        scroll.preferredSize = java.awt.Dimension(475, 240)
+                        scroll.preferredSize = JBUI.size(475, 240)
                         cell(scroll)
                     }
+                }
+                group("About") {
+                    row {
+                        cell(datasetAboutLabel).align(AlignX.FILL)
+                    }.layout(RowLayout.PARENT_GRID)
                 }
             }
             root?.add(content, BorderLayout.CENTER)
             updateDatasetInfoLabel()
         }
-
-        downloadSampleLink.setListener(LinkListener { _, _ ->
-            downloadSample()
-        }, null)
 
         loadFileButton.addActionListener {
             val descriptor = FileChooserDescriptor(true, false, false, false, false, false)
@@ -263,6 +279,31 @@ class StdNamingHoundConfigurable : Configurable {
         val indexSize = searchIndexRepository.getIndex().entries.size
         datasetInfoHelp.toolTipText =
             "terms: ${dataset.terms.size}, words: ${dataset.words.size}, domain: ${dataset.domains.size}, index: $indexSize"
+        datasetAboutLabel.text = buildDatasetAboutText(meta)
+    }
+
+    /** 내장 데이터셋의 출처와 이용허락 정보를 HTML 라벨로 구성한다. */
+    private fun buildDatasetAboutText(meta: com.github.ydj515.stdnaminghound.model.DatasetMeta?): String {
+        val source = escapeHtml(meta?.source?.takeIf { it.isNotBlank() } ?: "행정안전부 공공데이터 공통표준")
+        val generatedAt = escapeHtml(meta?.generatedAt?.takeIf { it.isNotBlank() } ?: "unknown")
+        return "<html>" +
+                "Built-in dataset source: $source<br/>" +
+                "Provider: 행정안전부 / 공공데이터포털<br/>" +
+                "License: $DATASET_LICENSE<br/>" +
+                "Official data: <a href=\"$TERMS_URL\">terms</a>, " +
+                "<a href=\"$WORDS_URL\">words</a>, " +
+                "<a href=\"$DOMAINS_URL\">domains</a><br/>" +
+                "Generated at: $generatedAt" +
+                "</html>"
+    }
+
+    /** HTML 라벨에 넣을 텍스트를 이스케이프한다. */
+    private fun escapeHtml(text: String): String {
+        return text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
     }
 
     /** 샘플 JSON을 저장할 위치를 선택받아 저장한다. */
@@ -298,7 +339,7 @@ class StdNamingHoundConfigurable : Configurable {
         val wrapper = dialog.save(null as java.nio.file.Path?, BASE_DATA_ZIP_FILENAME) ?: return
         try {
             val virtualFile = wrapper.virtualFile
-            val targetFile = wrapper.file?.toPath()?.toFile()
+            val targetFile = wrapper.file.toPath().toFile()
             when {
                 virtualFile != null -> {
                     ApplicationManager.getApplication().runWriteAction {

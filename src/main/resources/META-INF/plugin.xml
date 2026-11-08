@@ -17,6 +17,8 @@
         <toolWindow
                 factoryClass="com.github.ydj515.stdnaminghound.toolWindow.StdNamingHoundToolWindowFactory"
                 id="StdNamingHound"
+                anchor="left"
+                doNotActivateOnStart="false"
                 icon="/icons/stdNamingHound.svg"/>
         <postStartupActivity implementation="com.github.ydj515.stdnaminghound.startup.StdNamingHoundProjectActivity" />
         <applicationConfigurable

@@ -19,21 +19,20 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.ui.Messages
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBPanel
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Point
 import java.awt.datatransfer.StringSelection
 import kotlin.math.abs
-import javax.swing.BorderFactory
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JButton
-import javax.swing.JMenuItem
-import javax.swing.JPanel
-import javax.swing.JPopupMenu
 import javax.swing.SwingUtilities
 
 /** ToolWindow의 비즈니스 로직을 담당한다. */
@@ -73,6 +72,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         }
         if (allowedTypes.isEmpty()) {
             ui.listModel.clear()
+            updateTermFallbackHint(query, allowedTypes)
             return
         }
         val results = context.searchEngine.search(query, 50, allowedTypes)
@@ -80,6 +80,27 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         results.forEach { ui.listModel.addElement(it) }
         if (results.isNotEmpty()) {
             ui.resultList.selectedIndex = 0
+        }
+        updateTermFallbackHint(query, allowedTypes)
+    }
+
+    /** TERM 검색 결과가 없고 WORD 조합이 가능할 때 안내 힌트를 표시한다. */
+    private fun updateTermFallbackHint(query: String, allowedTypes: Set<SearchItemType>) {
+        val normalizedQuery = query.trim()
+        val canShowHint = normalizedQuery.isNotBlank() &&
+            SearchItemType.TERM in allowedTypes &&
+            SearchItemType.WORD in allowedTypes
+        val visible = if (canShowHint) {
+            val hasTerm = context.searchEngine.search(normalizedQuery, 1, setOf(SearchItemType.TERM)).isNotEmpty()
+            val hasWord = context.searchEngine.search(normalizedQuery, 1, setOf(SearchItemType.WORD)).isNotEmpty()
+            !hasTerm && hasWord
+        } else {
+            false
+        }
+        if (ui.termFallbackHint.isVisible != visible) {
+            ui.termFallbackHint.isVisible = visible
+            ui.topPanel.revalidate()
+            ui.topPanel.repaint()
         }
     }
 
@@ -98,15 +119,11 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         tokens.forEachIndexed { index, word ->
             val rawLabel = word.abbr ?: word.koName
             val tokenHeight = ui.addColumnButton.preferredSize.height
-            val chip = JPanel().apply {
+            val chip = JBPanel<JBPanel<*>>().apply {
                 layout = BoxLayout(this, BoxLayout.X_AXIS)
                 putClientProperty("tokenIndex", index)
-                border = BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(
-                        javax.swing.UIManager.getColor("Component.borderColor") ?: java.awt.Color.GRAY,
-                        1,
-                        true
-                    ),
+                border = javax.swing.BorderFactory.createCompoundBorder(
+                    JBUI.Borders.customLine(JBColor.border()),
                     JBUI.Borders.empty(1, 4, 1, 2)
                 )
                 isOpaque = true
@@ -114,8 +131,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
                 toolTipText = rawLabel
             }
             val handleLabel = JBLabel(TOKEN_HANDLE_PREFIX).apply {
-                foreground = javax.swing.UIManager.getColor("Label.disabledForeground")
-                    ?: javax.swing.UIManager.getColor("Label.foreground")
+                foreground = UIUtil.getLabelDisabledForeground()
                 alignmentY = Component.CENTER_ALIGNMENT
             }
             val textLabel = JBLabel(rawLabel).apply {
@@ -166,10 +182,10 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
 
     /** 토큰 드래그 앤 드롭 계산/인디케이터 표시를 담당한다. */
     private inner class TokenDnDHelper {
-        private val dropIndicator = JPanel().apply {
+        private val dropIndicator = JBPanel<JBPanel<*>>().apply {
             val focusColor = javax.swing.UIManager.getColor("Component.focusColor")
                 ?: javax.swing.UIManager.getColor("Focus.color")
-                ?: DEFAULT_DROP_INDICATOR_COLOR
+                ?: this@ToolWindowLogic.ui.resultList.selectionBackground
             background = focusColor
             isOpaque = true
             preferredSize = Dimension(JBUI.scale(2), JBUI.scale(24))
@@ -177,7 +193,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
 
         fun resolveInsertionIndex(point: Point): Int {
             val tokenChips = ui.tokensPanel.components
-                .filterIsInstance<JPanel>()
+                .filterIsInstance<javax.swing.JPanel>()
                 .filter { it.getClientProperty("tokenIndex") is Int }
             if (tokenChips.isEmpty()) return 0
             val ordered = tokenChips.sortedBy { it.x }
@@ -248,13 +264,13 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         }
     }
 
-    /** 선택 상태에 따라 컨텍스트 메뉴 활성화를 갱신한다. */
-    fun updateActionButtons(addBuilderMenuItem: JMenuItem?) {
-        val item = ui.resultList.selectedValue
-        val canAdd = ui.builderModeCheck.isSelected &&
-                (item?.type == SearchItemType.WORD || item?.type == SearchItemType.TERM)
-        addBuilderMenuItem?.isEnabled = canAdd
+    /** 검색 항목을 Builder에 추가할 수 있는지 판단한다. */
+    fun canAddToBuilder(item: SearchItem): Boolean {
+        return item.type == SearchItemType.WORD || item.type == SearchItemType.TERM
     }
+
+    /** 검색 항목에서 컬럼 SQL을 생성할 수 있는지 판단한다. */
+    fun canCopySqlColumn(item: SearchItem): Boolean = item.type == SearchItemType.TERM
 
     /** 텍스트를 클립보드에 복사한다. */
     fun copyText(text: String) {
@@ -284,6 +300,26 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
             SearchItemType.WORD -> item.abbr ?: item.primaryEn ?: item.titleKo
             SearchItemType.DOMAIN -> item.titleKo
         }
+    }
+
+    /** TERM 항목을 컬럼 정의 SQL로 변환한다. */
+    fun buildColumnSqlForTerm(item: SearchItem): String? {
+        if (item.type != SearchItemType.TERM) return null
+        val termRef = item.payloadRef as? TermRef ?: return null
+        val term = context.datasetRepository.getDataset().terms.getOrNull(termRef.index) ?: return null
+        val columnName = term.abbr?.takeIf { it.isNotBlank() }
+            ?: item.primaryEn?.takeIf { it.isNotBlank() }
+            ?: item.titleKo
+        val domain = findDomainByName(term.domainName) ?: defaultDomain()
+        val dialect = DbDialect.fromName(context.settings.state.dbDialect)
+        val result = context.sqlGenerator.generateColumnSql(
+            columnName = columnName,
+            domain = domain,
+            description = term.description ?: term.koName,
+            dialect = dialect,
+            format = SqlFormat.COLUMN_DEFINITION,
+        )
+        return result.sql.trim().ifBlank { null }
     }
 
     /** 선택 항목을 Builder에 추가한다. */
@@ -470,33 +506,6 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
             .notify(project)
     }
 
-    /** 팝업 메뉴에 테마 색을 적용한다. */
-    fun applyPopupTheme(popup: JPopupMenu) {
-        val bg = javax.swing.UIManager.getColor("PopupMenu.background")
-            ?: javax.swing.UIManager.getColor("Menu.background")
-        val fg = javax.swing.UIManager.getColor("PopupMenu.foreground")
-            ?: javax.swing.UIManager.getColor("Menu.foreground")
-        if (bg != null) {
-            popup.background = bg
-            popup.isOpaque = true
-        }
-        if (fg != null) {
-            popup.foreground = fg
-        }
-        for (i in 0 until popup.componentCount) {
-            val comp = popup.getComponent(i)
-            if (comp is JMenuItem) {
-                if (bg != null) {
-                    comp.background = bg
-                    comp.isOpaque = true
-                }
-                if (fg != null) {
-                    comp.foreground = fg
-                }
-            }
-        }
-    }
-
     /** 기본 도메인을 반환한다. */
     fun defaultDomain(): Domain = DEFAULT_DOMAIN
 
@@ -516,7 +525,6 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
 
     companion object {
         private const val TOKEN_HANDLE_PREFIX = "\u2261"
-        private val DEFAULT_DROP_INDICATOR_COLOR = java.awt.Color(0x4A90E2)
 
         /** 도메인이 없을 때 사용하는 기본 도메인이다. */
         private val DEFAULT_DOMAIN = Domain(
