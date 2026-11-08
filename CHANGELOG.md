@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+## [0.0.10] - 2026-11-08
+### Fixed
+- Replaced the deprecated `DynamicBundle(String)` constructor call in `StdNamingHoundBundle` with `DynamicBundle(Class, String)`.
+- Fixed `Domain.length` receiver shadowing inside `buildString` in `SearchIndexBuilder`.
+
 ## [0.0.9] - 2026-06-07
 
 ### Added
