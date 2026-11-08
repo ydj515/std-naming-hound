@@ -24,6 +24,10 @@ Std Naming Hound는 표준 용어/단어/도메인 사전을 빠르게 검색하
 - 컬럼 누적 목록 기반 CREATE TABLE SQL 생성
 - DB Dialect 설정(MySQL/Postgres/Oracle) 반영
 - 커스텀 JSON 사전 import 및 병합 정책 지원
+
+내장 데이터셋:
+- 출처: 행정안전부 공공데이터 공통표준 용어/단어/도메인(공공데이터 공통표준 8차 제·개정, 2025.11월 기준)
+- 이용허락범위: 제한 없음
 <!-- Plugin description end -->
 
 표준 용어/단어 사전을 빠르게 검색하고, 컬럼명을 조합해 SQL을 생성하는 IntelliJ 기반 플러그인입니다.
@@ -70,8 +74,16 @@ Std Naming Hound는 표준 용어/단어/도메인 사전을 빠르게 검색하
 - `version` 필드 필수
 - terms/words/domains는 비워도 됨
 
+## 내장 데이터셋 출처/라이선스
+- 출처: 행정안전부 공공데이터 공통표준 8차 제·개정(2025.11월 기준)
+- 용어: [행정안전부_공공데이터 공통표준용어](https://www.data.go.kr/data/15156379/fileData.do)
+- 단어: [행정안전부_공공데이터 공통표준단어](https://www.data.go.kr/data/15156439/fileData.do)
+- 도메인: [행정안전부_공공데이터 공통표준도메인](https://www.data.go.kr/data/15156442/fileData.do)
+- 이용허락범위: 제한 없음
+- 번들 JSON은 플러그인 검색/SQL 생성을 위해 원천 데이터를 변환한 산출물입니다.
+
 ## 단축키/컨텍스트
-- 리스트 우클릭: Copy/Insert/Add to Builder
+- 리스트 우클릭: Copy/Insert/Add to Builder/Copy SQL Column
 - Output 복사 버튼 제공
 
 ## 설치

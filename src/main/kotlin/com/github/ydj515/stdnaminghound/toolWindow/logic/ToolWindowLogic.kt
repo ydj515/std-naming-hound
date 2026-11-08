@@ -12,23 +12,34 @@ import com.github.ydj515.stdnaminghound.sql.DbDialect
 import com.github.ydj515.stdnaminghound.sql.SqlFormat
 import com.github.ydj515.stdnaminghound.toolWindow.ColumnEntry
 import com.github.ydj515.stdnaminghound.toolWindow.context.ToolWindowContext
+import com.intellij.icons.AllIcons
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.ui.Messages
+import com.intellij.ui.JBColor
+import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBPanel
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
+import java.awt.Component
 import java.awt.Dimension
+import java.awt.Point
 import java.awt.datatransfer.StringSelection
+import kotlin.math.abs
+import javax.swing.Box
+import javax.swing.BoxLayout
 import javax.swing.DefaultComboBoxModel
-import javax.swing.JPopupMenu
-import javax.swing.JMenuItem
+import javax.swing.JButton
+import javax.swing.SwingUtilities
 
 /** ToolWindow의 비즈니스 로직을 담당한다. */
 class ToolWindowLogic(private val context: ToolWindowContext) {
     private val ui = context.ui
     private val project = context.toolWindow.project
+    private val tokenDnDHelper = TokenDnDHelper()
 
     /** 도메인 콤보박스를 갱신한다. */
     fun refreshDomainCombo(domains: List<Domain>) {
@@ -61,6 +72,7 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         }
         if (allowedTypes.isEmpty()) {
             ui.listModel.clear()
+            updateTermFallbackHint(query, allowedTypes)
             return
         }
         val results = context.searchEngine.search(query, 50, allowedTypes)
@@ -68,6 +80,27 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         results.forEach { ui.listModel.addElement(it) }
         if (results.isNotEmpty()) {
             ui.resultList.selectedIndex = 0
+        }
+        updateTermFallbackHint(query, allowedTypes)
+    }
+
+    /** TERM 검색 결과가 없고 WORD 조합이 가능할 때 안내 힌트를 표시한다. */
+    private fun updateTermFallbackHint(query: String, allowedTypes: Set<SearchItemType>) {
+        val normalizedQuery = query.trim()
+        val canShowHint = normalizedQuery.isNotBlank() &&
+            SearchItemType.TERM in allowedTypes &&
+            SearchItemType.WORD in allowedTypes
+        val visible = if (canShowHint) {
+            val hasTerm = context.searchEngine.search(normalizedQuery, 1, setOf(SearchItemType.TERM)).isNotEmpty()
+            val hasWord = context.searchEngine.search(normalizedQuery, 1, setOf(SearchItemType.WORD)).isNotEmpty()
+            !hasTerm && hasWord
+        } else {
+            false
+        }
+        if (ui.termFallbackHint.isVisible != visible) {
+            ui.termFallbackHint.isVisible = visible
+            ui.topPanel.revalidate()
+            ui.topPanel.repaint()
         }
     }
 
@@ -84,15 +117,59 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
             ui.tokensPanel.add(javax.swing.Box.createRigidArea(Dimension(0, emptyHeight)))
         }
         tokens.forEachIndexed { index, word ->
-            if (index > 0) {
-                ui.tokensPanel.add(javax.swing.Box.createHorizontalStrut(8))
+            val rawLabel = word.abbr ?: word.koName
+            val tokenHeight = ui.addColumnButton.preferredSize.height
+            val chip = JBPanel<JBPanel<*>>().apply {
+                layout = BoxLayout(this, BoxLayout.X_AXIS)
+                putClientProperty("tokenIndex", index)
+                border = javax.swing.BorderFactory.createCompoundBorder(
+                    JBUI.Borders.customLine(JBColor.border()),
+                    JBUI.Borders.empty(1, 4, 1, 2)
+                )
+                isOpaque = true
+                background = this@ToolWindowLogic.ui.tokensPanel.background
+                toolTipText = rawLabel
             }
-            val chip = javax.swing.JButton(word.abbr ?: word.koName).apply {
+            val handleLabel = JBLabel(TOKEN_HANDLE_PREFIX).apply {
+                foreground = UIUtil.getLabelDisabledForeground()
+                alignmentY = Component.CENTER_ALIGNMENT
+            }
+            val textLabel = JBLabel(rawLabel).apply {
+                alignmentY = Component.CENTER_ALIGNMENT
+            }
+            val removeButton = JButton(AllIcons.Actions.Close).apply {
+                isFocusable = false
+                isContentAreaFilled = false
+                border = JBUI.Borders.empty()
+                preferredSize = JBUI.size(14, 14)
+                minimumSize = JBUI.size(14, 14)
+                cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+                toolTipText = "제거"
+                alignmentY = Component.CENTER_ALIGNMENT
                 addActionListener {
                     context.builder.removeAt(index)
                     updateBuilderPreview()
                 }
             }
+            chip.add(Box.createHorizontalStrut(JBUI.scale(2)))
+            chip.add(handleLabel)
+            chip.add(Box.createHorizontalStrut(JBUI.scale(2)))
+            chip.add(textLabel)
+            chip.add(Box.createHorizontalStrut(JBUI.scale(2)))
+            chip.add(removeButton)
+            chip.add(Box.createHorizontalStrut(JBUI.scale(1)))
+            val currentPref = chip.preferredSize
+            val chipSize = Dimension(currentPref.width, tokenHeight)
+            chip.preferredSize = chipSize
+            chip.minimumSize = chipSize
+
+            val dragListener = TokenDragListener(index)
+            chip.addMouseListener(dragListener)
+            chip.addMouseMotionListener(dragListener)
+            handleLabel.addMouseListener(dragListener)
+            handleLabel.addMouseMotionListener(dragListener)
+            textLabel.addMouseListener(dragListener)
+            textLabel.addMouseMotionListener(dragListener)
             ui.tokensPanel.add(chip)
         }
         ui.tokensPanel.revalidate()
@@ -103,13 +180,97 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
         ui.builderPreview.repaint()
     }
 
-    /** 선택 상태에 따라 컨텍스트 메뉴 활성화를 갱신한다. */
-    fun updateActionButtons(addBuilderMenuItem: JMenuItem?) {
-        val item = ui.resultList.selectedValue
-        val canAdd = ui.builderModeCheck.isSelected &&
-                (item?.type == SearchItemType.WORD || item?.type == SearchItemType.TERM)
-        addBuilderMenuItem?.isEnabled = canAdd
+    /** 토큰 드래그 앤 드롭 계산/인디케이터 표시를 담당한다. */
+    private inner class TokenDnDHelper {
+        private val dropIndicator = JBPanel<JBPanel<*>>().apply {
+            val focusColor = javax.swing.UIManager.getColor("Component.focusColor")
+                ?: javax.swing.UIManager.getColor("Focus.color")
+                ?: this@ToolWindowLogic.ui.resultList.selectionBackground
+            background = focusColor
+            isOpaque = true
+            preferredSize = Dimension(JBUI.scale(2), JBUI.scale(24))
+        }
+
+        fun resolveInsertionIndex(point: Point): Int {
+            val tokenChips = ui.tokensPanel.components
+                .filterIsInstance<javax.swing.JPanel>()
+                .filter { it.getClientProperty("tokenIndex") is Int }
+            if (tokenChips.isEmpty()) return 0
+            val ordered = tokenChips.sortedBy { it.x }
+            ordered.forEachIndexed { idx, chip ->
+                val centerX = chip.x + (chip.width / 2)
+                if (point.x < centerX) return idx
+            }
+            return ordered.size
+        }
+
+        fun showDropIndicator(insertionIndex: Int) {
+            ui.tokensPanel.remove(dropIndicator)
+            val count = ui.tokensPanel.componentCount
+            val safeIndex = insertionIndex.coerceIn(0, count)
+            ui.tokensPanel.add(dropIndicator, safeIndex)
+            ui.tokensPanel.revalidate()
+            ui.tokensPanel.repaint()
+        }
+
+        fun hideDropIndicator() {
+            if (dropIndicator.parent == ui.tokensPanel) {
+                ui.tokensPanel.remove(dropIndicator)
+                ui.tokensPanel.revalidate()
+                ui.tokensPanel.repaint()
+            }
+        }
     }
+
+    /** 토큰 칩 드래그를 처리한다. */
+    private inner class TokenDragListener(
+        private val tokenIndex: Int,
+    ) : java.awt.event.MouseAdapter() {
+        private var startPoint: Point? = null
+        private val dragThreshold = JBUI.scale(4)
+
+        override fun mousePressed(e: java.awt.event.MouseEvent) {
+            startPoint = SwingUtilities.convertPoint(e.component, e.point, ui.tokensPanel)
+        }
+
+        override fun mouseDragged(e: java.awt.event.MouseEvent) {
+            val currentPoint = SwingUtilities.convertPoint(e.component, e.point, ui.tokensPanel)
+            if (!isDragged(currentPoint)) return
+            val insertionIndex = tokenDnDHelper.resolveInsertionIndex(currentPoint)
+            tokenDnDHelper.showDropIndicator(insertionIndex)
+        }
+
+        override fun mouseReleased(e: java.awt.event.MouseEvent) {
+            tokenDnDHelper.hideDropIndicator()
+            val currentPoint = SwingUtilities.convertPoint(e.component, e.point, ui.tokensPanel)
+            if (!isDragged(currentPoint)) {
+                startPoint = null
+                return
+            }
+            val insertionIndex = tokenDnDHelper.resolveInsertionIndex(currentPoint)
+            var targetIndex = insertionIndex
+            if (targetIndex > tokenIndex) targetIndex -= 1
+            if (targetIndex != tokenIndex) {
+                context.builder.move(tokenIndex, targetIndex)
+                updateBuilderPreview()
+            }
+            startPoint = null
+        }
+
+        private fun isDragged(currentPoint: Point): Boolean {
+            val start = startPoint ?: return false
+            return abs(currentPoint.x - start.x) >= dragThreshold ||
+                abs(currentPoint.y - start.y) >= dragThreshold
+        }
+    }
+
+    /** 검색 항목을 Builder에 추가할 수 있는지 판단한다. */
+    fun canAddToBuilder(item: SearchItem): Boolean {
+        return item.type == SearchItemType.WORD || item.type == SearchItemType.TERM
+    }
+
+    /** 검색 항목에서 컬럼 SQL을 생성할 수 있는지 판단한다. */
+    fun canCopySqlColumn(item: SearchItem): Boolean = item.type == SearchItemType.TERM
 
     /** 텍스트를 클립보드에 복사한다. */
     fun copyText(text: String) {
@@ -139,6 +300,26 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
             SearchItemType.WORD -> item.abbr ?: item.primaryEn ?: item.titleKo
             SearchItemType.DOMAIN -> item.titleKo
         }
+    }
+
+    /** TERM 항목을 컬럼 정의 SQL로 변환한다. */
+    fun buildColumnSqlForTerm(item: SearchItem): String? {
+        if (item.type != SearchItemType.TERM) return null
+        val termRef = item.payloadRef as? TermRef ?: return null
+        val term = context.datasetRepository.getDataset().terms.getOrNull(termRef.index) ?: return null
+        val columnName = term.abbr?.takeIf { it.isNotBlank() }
+            ?: item.primaryEn?.takeIf { it.isNotBlank() }
+            ?: item.titleKo
+        val domain = findDomainByName(term.domainName) ?: defaultDomain()
+        val dialect = DbDialect.fromName(context.settings.state.dbDialect)
+        val result = context.sqlGenerator.generateColumnSql(
+            columnName = columnName,
+            domain = domain,
+            description = term.description ?: term.koName,
+            dialect = dialect,
+            format = SqlFormat.COLUMN_DEFINITION,
+        )
+        return result.sql.trim().ifBlank { null }
     }
 
     /** 선택 항목을 Builder에 추가한다. */
@@ -325,33 +506,6 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
             .notify(project)
     }
 
-    /** 팝업 메뉴에 테마 색을 적용한다. */
-    fun applyPopupTheme(popup: JPopupMenu) {
-        val bg = javax.swing.UIManager.getColor("PopupMenu.background")
-            ?: javax.swing.UIManager.getColor("Menu.background")
-        val fg = javax.swing.UIManager.getColor("PopupMenu.foreground")
-            ?: javax.swing.UIManager.getColor("Menu.foreground")
-        if (bg != null) {
-            popup.background = bg
-            popup.isOpaque = true
-        }
-        if (fg != null) {
-            popup.foreground = fg
-        }
-        for (i in 0 until popup.componentCount) {
-            val comp = popup.getComponent(i)
-            if (comp is JMenuItem) {
-                if (bg != null) {
-                    comp.background = bg
-                    comp.isOpaque = true
-                }
-                if (fg != null) {
-                    comp.foreground = fg
-                }
-            }
-        }
-    }
-
     /** 기본 도메인을 반환한다. */
     fun defaultDomain(): Domain = DEFAULT_DOMAIN
 
@@ -370,6 +524,8 @@ class ToolWindowLogic(private val context: ToolWindowContext) {
     }
 
     companion object {
+        private const val TOKEN_HANDLE_PREFIX = "\u2261"
+
         /** 도메인이 없을 때 사용하는 기본 도메인이다. */
         private val DEFAULT_DOMAIN = Domain(
             name = "기본V255",

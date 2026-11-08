@@ -1,0 +1,19 @@
+Std Naming Hound built-in dataset notice
+
+Source:
+- Ministry of the Interior and Safety, Public Data Common Standard Terms
+  https://www.data.go.kr/data/15156379/fileData.do
+- Ministry of the Interior and Safety, Public Data Common Standard Words
+  https://www.data.go.kr/data/15156439/fileData.do
+- Ministry of the Interior and Safety, Public Data Common Standard Domains
+  https://www.data.go.kr/data/15156442/fileData.do
+
+Dataset basis:
+- Public Data Common Standard 8th enactment/revision, 2025.11
+- Bundled dataset version: 2025.11
+
+License / permission:
+- Public Data Portal permission scope: no restriction.
+
+Generated artifact:
+- The bundled JSON files are transformed from the public source data for plugin use.
