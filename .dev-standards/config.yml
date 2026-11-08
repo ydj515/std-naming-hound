@@ -1,0 +1,12 @@
+version: 1
+
+base: true
+
+languages:
+  - kotlin
+
+builds:
+  - gradle
+
+tools:
+  - kover
