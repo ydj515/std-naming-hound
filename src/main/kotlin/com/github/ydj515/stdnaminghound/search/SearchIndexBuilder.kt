@@ -88,20 +88,12 @@ class SearchIndexBuilder {
 
     /** Domain을 검색용 아이템으로 변환한다. */
     private fun Domain.toSearchItem(index: Int): SearchItem {
-        val size = buildString {
-            val len = length?.toString()
-            val sc = scale?.toString()
-            if (!len.isNullOrBlank()) {
-                append(len)
-                if (!sc.isNullOrBlank()) {
-                    append(",")
-                    append(sc)
-                }
-            }
+        val size = length?.let { len ->
+            if (scale != null) "$len,$scale" else "$len"
         }
         val subText = listOfNotNull(
             dataType?.takeIf { it.isNotBlank() },
-            size.takeIf { it.isNotBlank() },
+            size,
         ).joinToString(" ")
             .ifBlank { null }
         return SearchItem(
